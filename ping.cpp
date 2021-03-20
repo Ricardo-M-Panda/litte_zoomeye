@@ -27,14 +27,13 @@
 #define MAX_NO_PACKETS  3
 #define MAX_IP_ADDRESS  200
 #define PACKET_DATE_LEN 56
-/*¶¨ÒåÍø¿¨£¬ÓÃÀ´¿ªÆô»ìÔÓÄ£Ê½*/
+/*å®šä¹‰ç½‘å¡ï¼Œç”¨æ¥å¼€å¯æ··æ‚æ¨¡å¼*/
 #define ETH_NAME    "eth1"
 char sendpacket[PACKET_SIZE];
 char recvpacket[PACKET_SIZE];
 unsigned long ip_list[MAX_IP_ADDRESS];
-/*key×÷Îª¿ª¹Ø¿ØÖÆ½ÓÊÜ½ø³Ì½áÊø*/
-int KEY;
-/*½ø³ÌÂë*/
+
+/*è¿›ç¨‹ç */
 pid_t pid;
 struct sockaddr_in dest_addr;
 
@@ -45,30 +44,24 @@ void alarm_handler(int sockfd);
 unsigned short cal_chksum(unsigned short* addr, int len);
 int pack(int pack_no);
 void send_packet(int sockfd);
-/*ip_list_lenÎª´ıÉ¨ÃèipÏîÄ¿Êı£¬´Ë´¦ÓÃÀ´¸æÖª½ÓÊÕ½ø³Ì×îÉÙÓ¦½ÓÊÕµÄÊı¾İ°üÊıÁ¿*/
+/*ip_list_lenä¸ºå¾…æ‰«æipé¡¹ç›®æ•°ï¼Œæ­¤å¤„ç”¨æ¥å‘ŠçŸ¥æ¥æ”¶è¿›ç¨‹æœ€å°‘åº”æ¥æ”¶çš„æ•°æ®åŒ…æ•°é‡*/
 void recv_packet(int sockfd,int ip_list_len);
 int unpack(char* buf, int len);
-void get_ipList(char* filename);
-/*»ñÈ¡Êı×é³¤¶È*/
-int getArrayLen(unsigned long array[]);
+unsigned int get_ipList(char* filename);
+
 int do_promisc(void);
 int check_nic(void);
-int getArrayLen(unsigned long array[])
-{
-    return (sizeof(array) / sizeof(array[0]));
 
-}
 //void tv_sub(struct timeval* out, struct timeval* in);
-/*½ÓÊÕ½ø³ÌµÄÄÖÖÓÉù*/
+/*æ¥æ”¶è¿›ç¨‹çš„é—¹é’Ÿå£°*/
 void alarm_handler(int sockfd)
 {
-    KEY = 0;
     printf("\n--------------------PING END-------------------\n");
     close(sockfd);
     exit(1);
 
 }
-/*Ğ£ÑéºÍËã·¨*/
+/*æ ¡éªŒå’Œç®—æ³•*/
 unsigned short cal_chksum(unsigned short* addr, int len)
 {
     int nleft = len;
@@ -76,13 +69,13 @@ unsigned short cal_chksum(unsigned short* addr, int len)
     unsigned short* w = addr;
     unsigned short answer = 0;
 
-    /*°ÑICMP±¨Í·¶ş½øÖÆÊı¾İÒÔ2×Ö½ÚÎªµ¥Î»ÀÛ¼ÓÆğÀ´*/
+    /*æŠŠICMPæŠ¥å¤´äºŒè¿›åˆ¶æ•°æ®ä»¥2å­—èŠ‚ä¸ºå•ä½ç´¯åŠ èµ·æ¥*/
     while (nleft > 1)
     {
         sum += *w++;
         nleft -= 2;
     }
-    /*ÈôICMP±¨Í·ÎªÆæÊı¸ö×Ö½Ú£¬»áÊ£ÏÂ×îºóÒ»×Ö½Ú¡£°Ñ×îºóÒ»¸ö×Ö½ÚÊÓÎªÒ»¸ö2×Ö½ÚÊı¾İµÄ¸ß×Ö½Ú£¬Õâ¸ö2×Ö½ÚÊı¾İµÄµÍ×Ö½ÚÎª0£¬¼ÌĞøÀÛ¼Ó*/
+    /*è‹¥ICMPæŠ¥å¤´ä¸ºå¥‡æ•°ä¸ªå­—èŠ‚ï¼Œä¼šå‰©ä¸‹æœ€åä¸€å­—èŠ‚ã€‚æŠŠæœ€åä¸€ä¸ªå­—èŠ‚è§†ä¸ºä¸€ä¸ª2å­—èŠ‚æ•°æ®çš„é«˜å­—èŠ‚ï¼Œè¿™ä¸ª2å­—èŠ‚æ•°æ®çš„ä½å­—èŠ‚ä¸º0ï¼Œç»§ç»­ç´¯åŠ */
     if (nleft == 1)
     {
         *(unsigned char*)(&answer) = *(unsigned char*)w;
@@ -93,7 +86,7 @@ unsigned short cal_chksum(unsigned short* addr, int len)
     answer = ~sum;
     return answer;
 }
-/*ÉèÖÃICMP±¨Í·*/
+/*è®¾ç½®ICMPæŠ¥å¤´*/
 int pack(int pack_no)
 {
     int i, packsize;
@@ -104,20 +97,21 @@ int pack(int pack_no)
     icmp->icmp_code = 0;
     icmp->icmp_cksum = 0;
     icmp->icmp_seq = pack_no;
+    /*æ­¤å¤„pidä¸ºä¸»è¿›ç¨‹forkåå¾—åˆ°çš„å­è¿›ç¨‹id,ç”¨äºè®¾ç½®ICMPçš„æ ‡å¿—ç¬¦*/
     icmp->icmp_id = pid;
     packsize = 8 + PACKET_DATE_LEN;
     //tval = (struct timeval*)icmp->icmp_data;
-    //gettimeofday(tval, NULL);    /*¼ÇÂ¼·¢ËÍÊ±¼ä*/
-    icmp->icmp_cksum = cal_chksum((unsigned short*)icmp, packsize); /*Ğ£ÑéËã·¨*/
+    //gettimeofday(tval, NULL);    /*è®°å½•å‘é€æ—¶é—´*/
+    icmp->icmp_cksum = cal_chksum((unsigned short*)icmp, packsize); /*æ ¡éªŒç®—æ³•*/
     return packsize;
 }
-/*·¢ËÍÈı¸öICMP±¨ÎÄ*/
+/*å‘é€ä¸‰ä¸ªICMPæŠ¥æ–‡*/
 void send_packet(int sockfd)
 {
     int packetsize, i, nsend = 0;
     for (i = 0; i < MAX_NO_PACKETS; i++) {
         nsend++;
-        packetsize = pack(nsend); /*ÉèÖÃICMP±¨Í·*/
+        packetsize = pack(nsend); /*è®¾ç½®ICMPæŠ¥å¤´*/
         if (sendto(sockfd, sendpacket, packetsize, 0,
             (struct sockaddr*)&dest_addr, sizeof(dest_addr)) < 0)
         {
@@ -128,15 +122,27 @@ void send_packet(int sockfd)
 
 
 }
-/*½ÓÊÕËùÓĞICMP±¨ÎÄ*/
+/*æ¥æ”¶æ‰€æœ‰ICMPæŠ¥æ–‡*/
 void recv_packet(int sockfd,int ip_list_len)
 {
-    int n, nreceived = 0;
+    int n, nreceived = 0,all_packet= (ip_list_len * MAX_NO_PACKETS);
     socklen_t fromlen;
 
 
     fromlen = sizeof(from);
-    while (KEY == 1)
+    /*è€ƒè™‘ä¸¤ç§æƒ…å½¢ï¼Œæ»¡è¶³å…¶ä¸€åˆ™ç»“æŸæ¥æ”¶åŒ…ã€‚*/
+    /*1.å·²æ¥å—åˆ°æ‰€æœ‰å‘å‡ºå»çš„åŒ…*/
+    /*2.æœ€å¤šå¯ç­‰å¾…æ—¶é—´å·²ç»ç”¨å®Œï¼Œå…¶ä¸­æ¯ä¸ªåŒ…ä»¥400msä¸ºæœ€å¤§ç­‰å¾…æ—¶é—´*/
+                /*è®¾å®šä¿¡å·åŠé—¹é’Ÿ*/
+    if (signal(SIGALRM, alarm_handler)) {
+        perror("signal sigalarm error");
+    }
+    double time = 0.3*all_packet;
+    alarm(time);
+    printf("\n---------CLOCK!-%f--------\n",time);
+
+    /*æ­¤å¤„æ—¶é—´ä¸ºåº•çº¿ï¼Œç”¨å®Œåˆ™ç«‹åˆ»åœæ­¢*/
+    while (nreceived < all_packet)
     {
         if ((n = recvfrom(sockfd, recvpacket, sizeof(recvpacket), 0,
             (struct sockaddr*)&from, &fromlen)) < 0)
@@ -145,53 +151,62 @@ void recv_packet(int sockfd,int ip_list_len)
             perror("recvfrom error");
             continue;
         }
-        if (unpack(recvpacket, n) == -1)continue;
-        nreceived++;
-        if (nreceived == ip_list_len)
-        {
-            /*Éè¶¨ĞÅºÅ¼°ÄÖÖÓ*/
-            printf("\n---------CLOCK!---------\n");
-            if (signal(SIGALRM, alarm_handler)) {
-                perror("signal sigalarm error");
-            }
-            /*Ö¸¶¨ÔÚÒÑ¾­½ÓÊÕÁË×îÉÙ£¨·¢ËÍ°üµÄÊıÁ¿£©Ó¦½ÓÊÕµÄ°üºó£¬*/
-            /*ÈÔÈ»³ÖĞø½ÓÊÕµÄÊ±¼ä£¨ÓÉÓÚ¿ªÆô»ìÔÓÄ£Ê½£¬ÒÑ½ÓÊÕµÄ²»Ò»¶¨ÊÇ×Ô¼º·¢µÄ£©*/
-            alarm(3);
-        }
+        if (unpack(recvpacket, n) == -1)
+            continue;
+        /*æ‰€å‘åŒ…=ipæ•°*MAX_NO_PACKETSï¼Œæ­¤å¤„æ¥æ”¶ä¹Ÿåº”å¦‚æ­¤*/
+            nreceived++;
+         printf("allpacket is :%d,nreceived is : %d ,ip_list_len is %d",all_packet,nreceived, ip_list_len);
         
     }
+    return;
 }
-/*°şÈ¥ICMP±¨Í·*/
+/*å‰¥å»ICMPæŠ¥å¤´*/
 int unpack(char* buf, int len)
 {
     int i, iphdrlen;
     struct ip* ip;
     struct icmp* icmp;
     //struct timeval* tvsend;
-    double rtt;
+    char* os;
     ip = (struct ip*)buf;
-    iphdrlen = ip->ip_hl << 2;    /*Çóip±¨Í·³¤¶È,¼´ip±¨Í·µÄ³¤¶È±êÖ¾³Ë4*/
-    icmp = (struct icmp*)(buf + iphdrlen);  /*Ô½¹ıip±¨Í·,Ö¸ÏòICMP±¨Í·*/
-    len -= iphdrlen;            /*ICMP±¨Í·¼°ICMPÊı¾İ±¨µÄ×Ü³¤¶È*/
-    if (len < 8)                /*Ğ¡ÓÚICMP±¨Í·³¤¶ÈÔò²»ºÏÀí*/
+    iphdrlen = ip->ip_hl << 2;    /*æ±‚ipæŠ¥å¤´é•¿åº¦,å³ipæŠ¥å¤´çš„é•¿åº¦æ ‡å¿—ä¹˜4*/
+    icmp = (struct icmp*)(buf + iphdrlen);  /*è¶Šè¿‡ipæŠ¥å¤´,æŒ‡å‘ICMPæŠ¥å¤´*/
+    len -= iphdrlen;            /*ICMPæŠ¥å¤´åŠICMPæ•°æ®æŠ¥çš„æ€»é•¿åº¦*/
+    if (len < 8)                /*å°äºICMPæŠ¥å¤´é•¿åº¦åˆ™ä¸åˆç†*/
     {
         printf("ICMP packets\'s length is less than 8\n");
         return -1;
     }
-    /*È·±£Ëù½ÓÊÕµÄÊÇICMPµÄ»ØÓ¦*/
+    /*ç¡®ä¿æ‰€æ¥æ”¶çš„æ˜¯ICMPçš„å›åº”*/
     if (icmp->icmp_type == ICMP_ECHOREPLY)
 
     {
         //tvsend = (struct timeval*)icmp->icmp_data;
-        //tv_sub(&tvrecv, tvsend);  /*½ÓÊÕºÍ·¢ËÍµÄÊ±¼ä²î*/
-        //rtt = tvrecv.tv_sec * 1000 + tvrecv.tv_usec / 1000;  /*ÒÔºÁÃëÎªµ¥Î»¼ÆËãrtt*/
-        /*ÏÔÊ¾Ïà¹ØĞÅÏ¢*/
-        printf("%d byte from %s: icmp_seq=%u ttl=%d rtt=%.3f ms\n",
+        //tv_sub(&tvrecv, tvsend);  /*æ¥æ”¶å’Œå‘é€çš„æ—¶é—´å·®*/
+        //rtt = tvrecv.tv_sec * 1000 + tvrecv.tv_usec / 1000;  /*ä»¥æ¯«ç§’ä¸ºå•ä½è®¡ç®—rtt*/
+        /*æ˜¾ç¤ºç›¸å…³ä¿¡æ¯*/
+        if (ip->ip_ttl>128)
+        {
+            os = "Unix";
+        }
+        else if (ip->ip_ttl > 64)
+        {
+            os = "windows NT/2000/XP/10";
+        }
+        else if (ip->ip_ttl > 32)
+        {
+            os = "Linux or Compaq64 5.0";
+        }
+        else
+        {
+            os = "Windows 95/98";
+        }
+        printf("\n %d byte from %s: icmp_seq=%u ttl=%d OS : %s \n",
             len,
             inet_ntoa(from.sin_addr),
             icmp->icmp_seq,
             ip->ip_ttl,
-            rtt);
+            os);
         return 1;
     }
     else    
@@ -201,20 +216,21 @@ int unpack(char* buf, int len)
 
 
 
-/*»ñÈ¡´ıÉ¨ÃèipÇåµ¥*/
-void  get_ipList(char* filename) {
+/*è·å–å¾…æ‰«æipæ¸…å•*/
+unsigned int  get_ipList(char* filename) {
     int fd = open(filename, O_RDWR);
+    unsigned int i = 0;
     if (fd == -1)
     {
         printf("error is %s\n", strerror(errno));
     }
     else
     {
-        /*´òÓ¡ÎÄ¼şÃèÊö·ûºÅ*/
+        /*æ‰“å°æ–‡ä»¶æè¿°ç¬¦å·*/
         printf("success fd = %d\n", fd);
         char buf[200], * next_deli = NULL, * delimiter = ",";
 
-        int i = 0, str_len;
+        int  str_len;
         read(fd, buf, 200);
         str_len = strlen(buf);
 
@@ -230,31 +246,31 @@ void  get_ipList(char* filename) {
             i++;
             pToken = strtok_r(NULL, delimiter, &next_deli);
         }
-        i = 0;
 
         close(fd);
 
     }
-    exit;
+    return i;
 
 }
 
 
 
-/*Ö÷º¯Êı*/
+/*ä¸»å‡½æ•°*/
 main()
 {
-    KEY = 1;
     int i, datalen = PACKET_DATE_LEN;
     char* filename = "ip_icmp", * hostname = NULL;
-    /*»ñÈ¡ĞèÒªÉ¨ÃèµÄipÁĞ±í*/
-    get_ipList(filename);
-    /*ipÁĞ±íÏîÄ¿Êı*/
-    int ip_list_len = getArrayLen(ip_list);
-    unsigned long* ip_list_main;
+    unsigned ip_list_len;
+    /*è·å–éœ€è¦æ‰«æçš„ipåˆ—è¡¨,è¯¥å‡½æ•°è¿”å›å€¼ä¸ºipåˆ—è¡¨é¡¹ç›®æ•°*/
+    if ((ip_list_len = get_ipList(filename)) == 0)
+    {
+        printf("ip list is none");
+        exit;
+    }
 
 
-    /*Ë«½ø³Ì£¬Ò»·¢Ò»ÊÕ*/
+    /*åŒè¿›ç¨‹ï¼Œä¸€å‘ä¸€æ”¶*/
     pid = fork();
     int sockfd;
     if (pid < 0)
@@ -272,22 +288,25 @@ main()
         perror("getprotobyname");
         exit(1);
     }
-    /*Éú³ÉÊ¹ÓÃICMPµÄÔ­Ê¼Ì×½Ó×Ö,ÕâÖÖÌ×½Ó×ÖÖ»ÓĞroot²ÅÄÜÉú³É*/
+    /*ç”Ÿæˆä½¿ç”¨ICMPçš„åŸå§‹å¥—æ¥å­—,è¿™ç§å¥—æ¥å­—åªæœ‰rootæ‰èƒ½ç”Ÿæˆ*/
     if ((sockfd = socket(AF_INET, SOCK_RAW, protocol->p_proto)) < 0)
     {
         perror("socket error");
         exit(1);
     }
-    /* »ØÊÕrootÈ¨ÏŞ,ÉèÖÃµ±Ç°ÓÃ»§È¨ÏŞ*/
+    /* å›æ”¶rootæƒé™,è®¾ç½®å½“å‰ç”¨æˆ·æƒé™*/
     setuid(getuid());
-    /*À©´óÌ×½Ó×Ö½ÓÊÕ»º³åÇøµ½50KÕâÑù×öÖ÷ÒªÎªÁË¼õĞ¡½ÓÊÕ»º³åÇøÒç³öµÄ
-      µÄ¿ÉÄÜĞÔ,ÈôÎŞÒâÖĞpingÒ»¸ö¹ã²¥µØÖ·»ò¶à²¥µØÖ·,½«»áÒıÀ´´óÁ¿Ó¦´ğ*/
+    /*æ‰©å¤§å¥—æ¥å­—æ¥æ”¶ç¼“å†²åŒºåˆ°50Kè¿™æ ·åšä¸»è¦ä¸ºäº†å‡å°æ¥æ”¶ç¼“å†²åŒºæº¢å‡ºçš„
+      çš„å¯èƒ½æ€§,è‹¥æ— æ„ä¸­pingä¸€ä¸ªå¹¿æ’­åœ°å€æˆ–å¤šæ’­åœ°å€,å°†ä¼šå¼•æ¥å¤§é‡åº”ç­”*/
     setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
-    /*½ÓÊÕËùÓĞICMP±¨ÎÄ*/
+    /*æ¥æ”¶æ‰€æœ‰ICMPæŠ¥æ–‡*/
     if (pid == 0)
     {
+
+        
         printf("\n I am child,pid id :%d, getpid is %d \n", pid, getpid());
-        // do_promisc();
+        /*æ··æ‚æ¨¡å¼*/
+        //do_promisc();
         recv_packet(sockfd, ip_list_len);
     }
     if (pid > 0) {
@@ -298,26 +317,25 @@ main()
         printf("\n--------------------PING START-------------------\n");
         while ((inaddr = ip_list[i]) != 0)
         {
-            /*ÅĞ¶ÏÊÇÖ÷»úÃû»¹ÊÇipµØÖ·*/
+            /*åˆ¤æ–­æ˜¯ä¸»æœºåè¿˜æ˜¯ipåœ°å€*/
             if (inaddr == INADDR_NONE)
             {
-                if ((host = gethostbyname(hostname)) == NULL) /*ÊÇÖ÷»úÃû*/
+                if ((host = gethostbyname(hostname)) == NULL) /*æ˜¯ä¸»æœºå*/
                 {
                     perror("gethostbyname error");
                     exit(1);
                 }
                 memcpy((char*)&dest_addr.sin_addr, host->h_addr, host->h_length);
             }
-            else    /*ÊÇipµØÖ·*/
+            else    /*æ˜¯ipåœ°å€*/
                 dest_addr.sin_addr.s_addr = inaddr;
-            /*»ñÈ¡mainµÄ½ø³Ìid,ÓÃÓÚÉèÖÃICMPµÄ±êÖ¾·û*/
             printf("PING %s(%s): %d bytes data in ICMP packets.\n", inet_ntoa(dest_addr.sin_addr),
                 inet_ntoa(dest_addr.sin_addr), datalen);
-            send_packet(sockfd);  /*·¢ËÍËùÓĞICMP±¨ÎÄ*/
+            send_packet(sockfd);  /*å‘é€æ‰€æœ‰ICMPæŠ¥æ–‡*/
             i++;
         }
         close(sockfd);
-        /*×èÈû£¬µÈ´ı½ÓÊÕ½ø³Ì½áÊø²¢»ØÊÕËü*/
+        /*é˜»å¡ï¼Œç­‰å¾…æ¥æ”¶è¿›ç¨‹ç»“æŸå¹¶å›æ”¶å®ƒ*/
         int status;
         pid_t child_finish_pid=wait(&status);
        
@@ -337,7 +355,7 @@ main()
 }
 
 
-///*Á½¸ötimeval½á¹¹Ïà¼õ*/
+///*ä¸¤ä¸ªtimevalç»“æ„ç›¸å‡*/
 //void tv_sub(struct timeval* out, struct timeval* in)
 //{
 //    if ((out->tv_usec -= in->tv_usec) < 0)
@@ -351,7 +369,7 @@ main()
 
 
 
-/*ÒÔÏÂÎªÉè¶¨»ìÔÓÄ£Ê½µÄº¯Êı*/
+/*ä»¥ä¸‹ä¸ºè®¾å®šæ··æ‚æ¨¡å¼çš„å‡½æ•°*/
 int do_promisc(void)
 {
 
@@ -403,7 +421,7 @@ int check_nic(void)
     {
         printf("link up\n");
         close(skfd);
-        return 0; // Íø¿¨ÒÑ²åÉÏÍøÏß
+        return 0; // ç½‘å¡å·²æ’ä¸Šç½‘çº¿
     }
     else
     {
