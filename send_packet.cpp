@@ -40,9 +40,9 @@ void send_tcp_packet()
         random_ports[tmp1] = tmp2;
     }
     
-    for (i = 0; i < n; i++) {
+    for (i = 79; i < n; i++) {
         nsend++;
-        send_one_packet(random_ports[i+1], sendpacket,-1);
+        send_one_packet(80, sendpacket,-1);
     }
 }
 
@@ -58,9 +58,5 @@ void send_one_packet(unsigned short randomport,  char sendpacket[],int flag)
         return;
     }
 
-    int j = 0;
-    for (int i = 0; i < 10000; i++)
-    {
-        j++;
-   }
+    usleep(1000);
 }

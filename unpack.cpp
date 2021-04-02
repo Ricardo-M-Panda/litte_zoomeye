@@ -25,7 +25,7 @@ int tcp_unpack(char* buf, int len, struct sockaddr_in * from_p ,unsigned short *
     }
     /*简单判断下，是否是回复自己的包*/
 
-    if (tcp->source != htons(TCP_SEND_PORT) )
+    if (tcp->dest != htons(TCP_SEND_PORT) )
     {
         return -1;
     }

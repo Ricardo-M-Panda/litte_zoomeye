@@ -1,4 +1,5 @@
 #include "scan_lib.h"
+
 extern sockaddr_in dest_rst_addr;
 extern unsigned int rst_seq, rst_ack_seq;
 struct tcp_false_hdr
@@ -10,12 +11,38 @@ struct tcp_false_hdr
 };
 
 /*带有选项字段的首部*/
-struct tcp_option_hdr {
-    struct tcphdr  tcp_hdr;
+struct tcp_option_mss {
     unsigned char option;
     unsigned char option_length;
     unsigned short option_value;
+};
+struct tcp_option_sack {
+    unsigned char option;
+    unsigned char option_length;
+};
 
+/*禁止自动对齐，防止对齐时自动填充nop*/
+struct tcp_option_timestamp {
+    unsigned char option;
+    unsigned char option_length;
+    unsigned long option_value;
+}__attribute__((packed)) data;
+struct tcp_option_nop {
+    unsigned char option;
+
+};
+struct tcp_option_winows_sale {
+    unsigned char option;
+    unsigned char option_length;
+    unsigned char option_value;
+};
+
+struct tcp_option {
+    struct tcp_option_mss mss;
+    struct tcp_option_sack sack;
+    struct tcp_option_timestamp timestamp;
+    struct tcp_option_nop nop;
+    struct tcp_option_winows_sale windowssale;
 };
 
 unsigned short cal_chksum(unsigned short* addr, int len);
@@ -44,27 +71,38 @@ int icmp_pack(int pack_no, pid_t pid, char sendpacket[])
 /*设置TCP报头*/
 int tcp_pack(unsigned short randomport, char sendpacket[],int flag)
 {
-    ///*本机套接字分配的ip地址*/
-    //struct sockaddr_in clientAddr;
-    //socklen_t clientAddrLen = sizeof(clientAddr);
-    //if (getsockname(*p_sockfd, (struct sockaddr*)&clientAddr, &clientAddrLen) == -1) {
-    //    printf("getsockname error: %s(errno: %d))\n", strerror(errno), errno);
-    //    exit(0);
-    //}
+
     int i, packsize;
+    /*设置IP头*/
+    struct ip* ip = (struct ip*)sendpacket;
+    ip->ip_v = IPVERSION;
+    ip->ip_hl = sizeof(struct ip) / 4;
+    ip->ip_tos = 0;
+    /*暂时置为0，所有其他内容填好后，再写ip长度*/
+    ip->ip_len = 0;
+    ip->ip_id = 0;
+    ip->ip_off = 0;
+    ip->ip_ttl = rand()%30+24;
+    ip->ip_p = IPPROTO_TCP;
+    ip->ip_sum = 0;
+    ip->ip_src.s_addr = source_addr.sin_addr.s_addr;
+    if (flag == -1)
+        ip->ip_dst.s_addr = dest_addr.sin_addr.s_addr;
+    else
+        ip->ip_dst.s_addr = dest_rst_addr.sin_addr.s_addr;
     struct tcphdr* tcp;
     //struct timeval* tval;
 
     /*以tcphdr结构操作套接字要发送的字节流*/
-    tcp = (struct tcphdr*)sendpacket;
+    tcp = (struct tcphdr*)(sendpacket+sizeof(*ip));
     tcp->source = source_addr.sin_port;
     tcp->dest = htons((unsigned short)randomport);
 
     
     
     tcp->res1 = 0;
-    /* +1: 设置一个4字节的MSS选项,后续应化简 */
-    tcp->doff= (sizeof(struct tcphdr) / 4)+1;
+    /* 先置0*/
+    tcp->doff= 0;
     tcp->fin = 0;
     /*根据flag判断发送syn还是rst*/
 
@@ -100,26 +138,51 @@ int tcp_pack(unsigned short randomport, char sendpacket[],int flag)
     }
     f_tcp.zero = 0;
     f_tcp.protocol = IPPROTO_TCP;
-    f_tcp.tcp_len = htons(sizeof(tcphdr)+4);
+    f_tcp.tcp_len = 0;
     /*计算校验和，先将伪首部和首部拼接起来*/
     /*首部最长60字节，伪首部12字节*/
 
-    tcp_option_hdr * p_tcp_option_hdr;
-    /*以选项套接字格式操作要发送的字节流*/
-    p_tcp_option_hdr = (tcp_option_hdr*)sendpacket;
-    p_tcp_option_hdr->option = 2;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    /*TCP选项*/
+    tcp_option* tcp_option =(struct tcp_option*)(sendpacket + sizeof(*ip)+sizeof(*tcp));
+    tcp_option->mss.option = 2;
+    tcp_option->mss.option_length = 4;
+    tcp_option->mss.option_value = htons(1460);
 
-    p_tcp_option_hdr->option_length = 4;
-    p_tcp_option_hdr->option_value = htons(1460);
-    packsize = sizeof(*p_tcp_option_hdr) + TCP_PACKET_DATE_LEN;
+    tcp_option->sack.option = 4;
+    tcp_option->sack.option_length = 2;
+
+
+
+    tcp_option->timestamp.option = 8;
+    tcp_option->timestamp.option_length = 10;
+    tcp_option->timestamp.option_value = htonl(tv.tv_sec * 1000 + tv.tv_usec / 1000);
+
+    tcp_option->nop.option = 1;
+
+    tcp_option->windowssale.option = 3;
+    tcp_option->windowssale.option_length = 3;
+    tcp_option->windowssale.option_value = 7;
+
+    /*修正上面结构体中有关长度的字段，单独拿出来是方便后续更改*/
+    unsigned int tcp_hdr_len = sizeof(*tcp) + sizeof(*tcp_option);
+    tcp->doff = tcp_hdr_len/4;
+    f_tcp.tcp_len = htons(tcp_hdr_len);
+
+    /*计算tcp校验和*/
+    packsize = tcp_hdr_len + TCP_PACKET_DATE_LEN;
     char buffers[256];
     memset(buffers, 0, 256);
     memcpy(buffers, &f_tcp, sizeof(f_tcp));
-    memcpy(buffers + sizeof(f_tcp), p_tcp_option_hdr, sizeof(*p_tcp_option_hdr));
+    memcpy(buffers + sizeof(f_tcp), tcp, sizeof(*tcp));
+    memcpy(buffers + sizeof(f_tcp) + sizeof(*tcp), tcp_option, sizeof(*tcp_option));
     tcp->check = cal_chksum((unsigned short*)buffers, packsize);
     //memset(buffers, 0, 256);
     //memcpy(buffers, &f_tcp, sizeof(f_tcp));
     //memcpy(buffers + sizeof(f_tcp), &tcp, sizeof(tcp));
     //tcp->check = cal_chksum((unsigned short*)buffers, packsize);
+    packsize += sizeof(*ip);
+    ip->ip_len = packsize;
     return packsize;
 }

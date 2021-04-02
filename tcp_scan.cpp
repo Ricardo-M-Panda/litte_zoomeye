@@ -58,13 +58,17 @@ void tcp_scan()
       的可能性,若无意中ping一个广播地址或多播地址,将会引来大量应答*/
     setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
 
+    /*自己设置ip头*/
+    const int on = 1;
+    setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on));
+
 
     source_addr.sin_family = AF_INET;
     memset(&source_addr, 0, sizeof(source_addr));
     //memcpy((char*)&source_addr.sin_addr, hent->h_addr, hent->h_length);
     source_addr.sin_addr.s_addr = inet_addr("47.111.11.142");
     source_addr.sin_port = htons(TCP_SEND_PORT);
-    bind(sockfd, (struct sockaddr*)&source_addr, sizeof(source_addr));
+ //   bind(sockfd, (struct sockaddr*)&source_addr, sizeof(source_addr));
     printf("\naddress is:%s \n port is: %d\n",inet_ntoa(source_addr.sin_addr), ntohs(source_addr.sin_port) );
     /*双进程，一发一收*/
     pid = fork();

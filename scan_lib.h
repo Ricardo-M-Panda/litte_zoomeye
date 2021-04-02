@@ -22,7 +22,6 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
-
 #include <linux/tcp.h>
 #include<time.h>
 #include<math.h>
@@ -38,10 +37,10 @@
 
 /*--------------tcp------------------*/
 #define TCP_PACKET_DATE_LEN 0
-#define MAX_TCP_PORT_PACKETS 100
+#define MAX_TCP_PORT_PACKETS 80
 #define TCP_MAX_PACKET_TIME  0.1
-#define TCP_MAX_WAIT_TIME  10
-#define TCP_SEND_PORT 555
+#define TCP_MAX_WAIT_TIME  5
+#define TCP_SEND_PORT 19999
 #define TCP_INIT_SEQ 0
 #define TCP_WINDOW_SIZE 1024
 /*--------------tcp------------------*/
