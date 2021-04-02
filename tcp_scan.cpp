@@ -1,9 +1,10 @@
 #include "scan_lib.h"
 
-void send_icmp_packet( pid_t pid );
+
+void send_tcp_packet();
 
 /*ip_list_len为待扫描ip项目数，此处用来告知接收进程最少应接收的数据包数量*/
-void icmp_recv_packet( unsigned int ip_list_len);
+void tcp_recv_packet(unsigned int ip_list_len);
 
 /*获取待扫描ip清单*/
 /*文件中读取ip（临时）*/
@@ -14,44 +15,39 @@ int check_nic(void);
 //void tv_sub(struct timeval* out, struct timeval* in);
 
 
+
 /*扫描主函数*/
-void icmp_scan()
+void tcp_scan()
 {
+    
     /*进程码*/
     pid_t pid;
-    int i, datalen = ICMP_PACKET_DATE_LEN;
+    int i, datalen = TCP_PACKET_DATE_LEN;
     char* filename = "ip_icmp", * hostname = NULL;
     unsigned int ip_list_len;
     /*这个数组是用来存储被inet_addr函数转换的网络地址的*/
-/*注意返回值虽然有的地方说明是unsigned long相同，但那是32位long*/
     in_addr_t ip_list[MAX_IP_ADDRESS];
     /*获取需要扫描的ip列表,该函数返回值为ip列表项目数*/
-    if ((ip_list_len = get_ipList(filename,ip_list)) == 0)
+    if ((ip_list_len = get_ipList(filename, ip_list)) == 0)
     {
         printf("ip list is none");
         exit;
     }
 
 
-    /*双进程，一发一收*/
-    pid = fork();
-    if (pid < 0)
-    {
-        perror("creat fork error");
-        exit(1);
-    }
+
     struct hostent* host;
     struct protoent* protocol;
     unsigned long inaddr = 0;
     int size = 60 * 1024;
 
-    if ((protocol = getprotobyname("icmp")) == NULL)
+    if ((protocol = getprotobyname("tcp")) == NULL)
     {
         perror("getprotobyname");
         exit(1);
     }
     /*生成使用ICMP的原始套接字,这种套接字只有root才能生成*/
-    if ((sockfd = socket(AF_INET, SOCK_RAW, protocol->p_proto)) < 0)
+    if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0)
     {
         perror("socket error");
         exit(1);
@@ -62,6 +58,22 @@ void icmp_scan()
       的可能性,若无意中ping一个广播地址或多播地址,将会引来大量应答*/
     setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
 
+
+    source_addr.sin_family = AF_INET;
+    memset(&source_addr, 0, sizeof(source_addr));
+    //memcpy((char*)&source_addr.sin_addr, hent->h_addr, hent->h_length);
+    source_addr.sin_addr.s_addr = inet_addr("47.111.11.142");
+    source_addr.sin_port = htons(TCP_SEND_PORT);
+    bind(sockfd, (struct sockaddr*)&source_addr, sizeof(source_addr));
+    printf("\naddress is:%s \n port is: %d\n",inet_ntoa(source_addr.sin_addr), ntohs(source_addr.sin_port) );
+    /*双进程，一发一收*/
+    pid = fork();
+
+    if (pid < 0)
+    {
+        perror("creat fork error");
+        exit(1);
+    }
     /*-----------------------------------------------------------------------*/
     /*接收所有报文*/
     if (pid == 0)
@@ -70,7 +82,8 @@ void icmp_scan()
         printf("\n I am child,pid id :%d, getpid is %d \n", pid, getpid());
         /*混杂模式*/
         //do_promisc();
-        icmp_recv_packet(ip_list_len);
+        tcp_recv_packet( ip_list_len);
+        exit(1);
     }
     /*-----------------------------------------------------------------------*/
 
@@ -80,7 +93,7 @@ void icmp_scan()
         printf("\n I am parent,pid id :%d \n", pid);
         bzero(&dest_addr, sizeof(dest_addr));
         dest_addr.sin_family = AF_INET;
-        
+
         printf("\n--------------------START-------------------\n");
         i = 0;
         while ((inaddr = ip_list[i]) != 0)
@@ -88,7 +101,7 @@ void icmp_scan()
             /*判断是主机名还是ip地址*/
             if (inaddr == INADDR_NONE)
             {
-                if ((host = gethostbyname(hostname)) == NULL) 
+                if ((host = gethostbyname(hostname)) == NULL)
                 {
                     perror("gethostbyname error");
                     exit(1);
@@ -98,9 +111,9 @@ void icmp_scan()
             }
             else    /*是ip地址*/
                 dest_addr.sin_addr.s_addr = inaddr;
-            printf("PING %s(%s): %d bytes data in ICMP packets.\n", inet_ntoa(dest_addr.sin_addr),
+            printf("TCP SCAN %s(%s): %d bytes data in SYN packets.\n", inet_ntoa(dest_addr.sin_addr),
                 inet_ntoa(dest_addr.sin_addr), datalen);
-            send_icmp_packet( pid);  /*发送所有ICMP报文*/
+            send_tcp_packet();  /*发送所有TCP报文*/
             i++;
         }
         close(sockfd);
@@ -117,28 +130,11 @@ void icmp_scan()
                 printf("\nChild process: %d failed to exit normally and  recycled\n", child_finish_pid);
         }
         else
-            perror("icmp child wait error");
+            perror("wait error");
 
     }
     return;
 }
-
-
-///*两个timeval结构相减*/
-//void tv_sub(struct timeval* out, struct timeval* in)
-//{
-//    if ((out->tv_usec -= in->tv_usec) < 0)
-//    {
-//        --out->tv_sec;
-//        out->tv_usec += 1000000;
-//    }
-//    out->tv_sec -= in->tv_sec;
-//}
-///*------------- The End -----------*/
-
-
-
-
 
 
 

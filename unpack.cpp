@@ -1,6 +1,52 @@
 #include "scan_lib.h"
+struct sockaddr_in dest_rst_addr;
+/*rst_ack_seq是接收包的确认号，rst_seq则是序列号*/
+unsigned int rst_ack_seq,rst_seq;
+
+int tcp_unpack(char* buf, int len, struct sockaddr_in * from_p ,unsigned short * p_dest_port  )
+{
+    int i, iphdrlen;
+    struct ip* ip;
+    struct tcphdr* tcp;
+    //struct timeval* tvsend;
+    char* os;
+    
+    ip = (struct ip*)buf;
+    //printf("\ndst ip :%s\n", inet_ntoa(ip->ip_dst));
+    //printf("\nsrc ip :%s\n", inet_ntoa(ip->ip_src));
+    
+    iphdrlen = ip->ip_hl << 2;    /*求ip报头长度,即ip报头的长度标志乘4*/
+    tcp = (struct tcphdr*)(buf + iphdrlen);  /*越过ip报头,指向ICMP报头*/
+    len -= iphdrlen;            /*ICMP报头及ICMP数据报的总长度*/
+    if (len < 20)                /*小于ICMP报头长度则不合理*/
+    {
+        printf("\nTCP packets\'s length is less than 20\n");
+        return -1;
+    }
+    /*简单判断下，是否是回复自己的包*/
+
+    if (tcp->source != htons(TCP_SEND_PORT) )
+    {
+        return -1;
+    }
+    /*回复syn+ack则该端口已打开*/
+    if (tcp->ack==1 || tcp->syn == 1)
+    {
+
+        *p_dest_port = ntohs(tcp->source);
+        dest_rst_addr = *from_p;
+        rst_ack_seq = tcp->ack_seq;
+        rst_seq = tcp->seq;
+        printf("\n%s port  %d is open \n", inet_ntoa(from_p->sin_addr), ntohs(tcp->dest));
+        /*控制权交回给调用程序，使其通过并发回复rst包*/
+        return ntohl(tcp->seq);
+    }
+    else
+        return -1;
+}
+
 /*剥去ICMP报头*/
-int unpack(char* buf, int len, struct sockaddr_in* from_p)
+int icmp_unpack(char* buf, int len, struct sockaddr_in* from_p)
 {
     int i, iphdrlen;
     struct ip* ip;

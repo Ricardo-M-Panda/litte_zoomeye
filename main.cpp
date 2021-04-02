@@ -1,6 +1,9 @@
 #include "scan_lib.h"
-void icmp_scan(int task);
+void icmp_scan();
+void tcp_scan();
+void randnumber();
+int sockfd;
+struct sockaddr_in dest_addr, source_addr;
 main() {
-	int task = 2;
-	icmp_scan(task);
+	tcp_scan();
 }
