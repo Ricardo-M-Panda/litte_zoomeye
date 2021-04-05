@@ -1,7 +1,7 @@
 #include "scan_lib.h"
 #define BUF_SIZE 64*1024
 #define RLT_SIZE
-
+void tcp_scan();
 struct mysql_packet {
 	/*两部分1：n*/
 	unsigned int version;
@@ -23,8 +23,8 @@ void fingerprint_scan() {
 	}
 	memset(&serv_adr, 0, sizeof(serv_adr));
 	serv_adr.sin_family = AF_INET;
-	serv_adr.sin_addr.s_addr = inet_addr("47.106.249.36");
-	serv_adr.sin_port = htons(atoi("443"));
+	serv_adr.sin_addr.s_addr = inet_addr("66.42.65.27");
+	serv_adr.sin_port = htons(atoi("80"));
 
 	if (connect(sock, (struct sockaddr*)&serv_adr, sizeof(serv_adr)) == -1)
 		perror("coonetct() error");
@@ -43,6 +43,6 @@ void fingerprint_scan() {
 		printf("%c", serv_msg[i]);
 	}*/
 
-
+	
 	close(sock);
 }

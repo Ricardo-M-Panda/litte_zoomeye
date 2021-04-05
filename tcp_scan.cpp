@@ -19,7 +19,7 @@ int check_nic(void);
 /*扫描主函数*/
 void tcp_scan()
 {
-    
+
     /*进程码*/
     pid_t pid;
     int i, datalen = TCP_PACKET_DATE_LEN;
@@ -63,13 +63,21 @@ void tcp_scan()
     setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on));
 
 
-    source_addr.sin_family = AF_INET;
+    /*本地ip*/
     memset(&source_addr, 0, sizeof(source_addr));
-    //memcpy((char*)&source_addr.sin_addr, hent->h_addr, hent->h_length);
-    source_addr.sin_addr.s_addr = inet_addr("47.111.11.142");
+    char hname[128];
+    struct hostent* hent;
+    gethostname(hname, sizeof(hname));
+    hent = gethostbyname(hname);
+    printf("\nhostname: %s\n ", hent->h_name);
+    printf("address is: %s\n", inet_ntoa(*(struct in_addr*)(hent->h_addr)));
+    memcpy((char*)&source_addr.sin_addr, hent->h_addr, hent->h_length);
+    source_addr.sin_family = AF_INET;
+
+    //source_addr.sin_addr.s_addr = inet_addr("192.168.1.108");
     source_addr.sin_port = htons(TCP_SEND_PORT);
- //   bind(sockfd, (struct sockaddr*)&source_addr, sizeof(source_addr));
-    printf("\naddress is:%s \n port is: %d\n",inet_ntoa(source_addr.sin_addr), ntohs(source_addr.sin_port) );
+    bind(sockfd, (struct sockaddr*)&source_addr, sizeof(source_addr));
+    printf("\naddress is:%s \n port is: %d\n", inet_ntoa(source_addr.sin_addr), ntohs(source_addr.sin_port));
     /*双进程，一发一收*/
     pid = fork();
 
@@ -86,7 +94,7 @@ void tcp_scan()
         printf("\n I am child,pid id :%d, getpid is %d \n", pid, getpid());
         /*混杂模式*/
         //do_promisc();
-        tcp_recv_packet( ip_list_len);
+        tcp_recv_packet(ip_list_len);
         exit(1);
     }
     /*-----------------------------------------------------------------------*/
@@ -139,8 +147,3 @@ void tcp_scan()
     }
     return;
 }
-
-
-
-
-

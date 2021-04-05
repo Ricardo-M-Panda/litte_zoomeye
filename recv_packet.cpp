@@ -3,7 +3,7 @@ pid_t send_rst_pid;
 void alarm_handler(int sig);
 void child_handler(int sig);
 int icmp_unpack(char* buf, int len, struct sockaddr_in* from_p);
-int tcp_unpack(char* buf, int len, struct sockaddr_in* from_p, unsigned short* p_dest_port);
+unsigned int tcp_unpack(char* buf, int len, struct sockaddr_in* from_p, unsigned short* p_dest_port);
 void send_one_packet(unsigned short randomport, char sendpacket[], int flag);
 /*接收所有ICMP报文*/
 void icmp_recv_packet( unsigned int ip_list_len)
@@ -69,11 +69,13 @@ void tcp_recv_packet( unsigned int ip_list_len)
     if (signal(SIGALRM, alarm_handler)) {
         perror("signal sigalarm error");
     }
-    double time = TCP_MAX_PACKET_TIME * all_packet;
+    double time = TCP_PACKET_WAIT_TIME * all_packet;
     /*设置一个时间等待上限，避免浪费太多时间*/
     if (time > TCP_MAX_WAIT_TIME)
         time = TCP_MAX_WAIT_TIME;
-    alarm(time);
+    /*每接收到一个包就重新计时*/
+
+    alarm(TCP_MAX_WAIT_TIME);
     printf("\n---------CLOCK!-%f--------\n", time);
 
     if (signal(SIGCHLD, child_handler)) {
@@ -93,7 +95,9 @@ void tcp_recv_packet( unsigned int ip_list_len)
         }
         if ((flag=tcp_unpack( recvpacket, n, &from ,&dest_port )) == -1)
             continue;
-        else 
+
+        
+        else
         {
             send_rst_pid =fork() ;
             if (send_rst_pid < 0)
@@ -106,8 +110,8 @@ void tcp_recv_packet( unsigned int ip_list_len)
                 close(sockfd);
                 exit(2);
             }
-            
         }
+
         /*所发包=ip数*MAX_ICMP_NO_PACKETS，此处接收也应如此*/
         nreceived++;
         printf("\nallpacket is :%d,nreceived is : %d ,ip_list_len is %d\n", all_packet, nreceived, ip_list_len);

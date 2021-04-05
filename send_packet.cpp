@@ -28,7 +28,7 @@ void send_tcp_packet()
     unsigned short  i, nsend = 0;
     unsigned short random_ports[MAX_TCP_PORT_PACKETS+1];
     srand((int)time(NULL));
-    for (i = 0; i < 101; i++)
+    for (i = 0; i < MAX_TCP_PORT_PACKETS+1; i++)
     {
         random_ports[i] = i ;
 
@@ -40,9 +40,11 @@ void send_tcp_packet()
         random_ports[tmp1] = tmp2;
     }
     
-    for (i = 79; i < n; i++) {
+    for (i = 0; i < n; i++) {
         nsend++;
-        send_one_packet(80, sendpacket,-1);
+
+            send_one_packet(random_ports[i+1], sendpacket, -1);
+        
     }
 }
 
@@ -58,5 +60,5 @@ void send_one_packet(unsigned short randomport,  char sendpacket[],int flag)
         return;
     }
 
-    usleep(1000);
+    usleep(TCP_SEND_RACE);
 }

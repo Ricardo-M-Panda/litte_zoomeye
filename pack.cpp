@@ -4,11 +4,14 @@ extern sockaddr_in dest_rst_addr;
 extern unsigned int rst_seq, rst_ack_seq;
 struct tcp_false_hdr
 {
-    unsigned int  src_ip;
-    unsigned int  dst_ip;
-    unsigned char zero,protocol;
-    unsigned short tcp_len;
+    u_int32_t  src_ip;
+    u_int32_t  dst_ip;
+    u_int8_t zero;
+    u_int8_t protocol;
+    u_int16_t tcp_len;
 };
+
+
 
 /*带有选项字段的首部*/
 struct tcp_option_mss {
@@ -26,7 +29,7 @@ struct tcp_option_timestamp {
     unsigned char option;
     unsigned char option_length;
     unsigned long option_value;
-}__attribute__((packed)) data;
+}__attribute__((packed));
 struct tcp_option_nop {
     unsigned char option;
 
@@ -39,10 +42,10 @@ struct tcp_option_winows_sale {
 
 struct tcp_option {
     struct tcp_option_mss mss;
-    struct tcp_option_sack sack;
-    struct tcp_option_timestamp timestamp;
-    struct tcp_option_nop nop;
-    struct tcp_option_winows_sale windowssale;
+    //struct tcp_option_sack sack;
+    //struct tcp_option_timestamp timestamp;
+    //struct tcp_option_nop nop;
+    //struct tcp_option_winows_sale windowssale;
 };
 
 unsigned short cal_chksum(unsigned short* addr, int len);
@@ -69,40 +72,41 @@ int icmp_pack(int pack_no, pid_t pid, char sendpacket[])
 
 
 /*设置TCP报头*/
-int tcp_pack(unsigned short randomport, char sendpacket[],int flag)
+int tcp_pack(unsigned short randomport, char sendpacket[], int flag)
 {
+
 
     int i, packsize;
     /*设置IP头*/
-    struct ip* ip = (struct ip*)sendpacket;
-    ip->ip_v = IPVERSION;
-    ip->ip_hl = sizeof(struct ip) / 4;
-    ip->ip_tos = 0;
+    struct iphdr* ip = (struct iphdr*)sendpacket;
+    ip->version = IPVERSION;
+    ip->ihl = sizeof(struct ip) / 4;
+    ip->tos = 0;
     /*暂时置为0，所有其他内容填好后，再写ip长度*/
-    ip->ip_len = 0;
-    ip->ip_id = 0;
-    ip->ip_off = 0;
-    ip->ip_ttl = rand()%30+24;
-    ip->ip_p = IPPROTO_TCP;
-    ip->ip_sum = 0;
-    ip->ip_src.s_addr = source_addr.sin_addr.s_addr;
+    ip->tot_len = 0;
+    ip->id = 0;
+    ip->frag_off = 0;
+    ip->ttl = 35+rand()%24;
+    ip->protocol = IPPROTO_TCP;
+    ip->check = 0;
+    ip->saddr = source_addr.sin_addr.s_addr;
     if (flag == -1)
-        ip->ip_dst.s_addr = dest_addr.sin_addr.s_addr;
+        ip->daddr = dest_addr.sin_addr.s_addr;
     else
-        ip->ip_dst.s_addr = dest_rst_addr.sin_addr.s_addr;
+        ip->daddr = dest_rst_addr.sin_addr.s_addr;
     struct tcphdr* tcp;
     //struct timeval* tval;
 
     /*以tcphdr结构操作套接字要发送的字节流*/
-    tcp = (struct tcphdr*)(sendpacket+sizeof(*ip));
+    tcp = (struct tcphdr*)(sendpacket + sizeof(*ip));
     tcp->source = source_addr.sin_port;
     tcp->dest = htons((unsigned short)randomport);
 
-    
-    
+
+
     tcp->res1 = 0;
     /* 先置0*/
-    tcp->doff= 0;
+    tcp->doff = 0;
     tcp->fin = 0;
     /*根据flag判断发送syn还是rst*/
 
@@ -112,21 +116,21 @@ int tcp_pack(unsigned short randomport, char sendpacket[],int flag)
     tcp->urg = 0;
     tcp->ece = 0;
     tcp->cwr = 0;
-    tcp->window= htons(TCP_WINDOW_SIZE);
+    tcp->window = htons(TCP_WINDOW_SIZE);
     /*校验算法*/
-    tcp->check=0;
-    tcp->urg_ptr=0;
-    
+    tcp->check = 0;
+    tcp->urg_ptr = 0;
+
     /*伪头部*/
     struct tcp_false_hdr f_tcp;
-    f_tcp.src_ip = source_addr.sin_addr.s_addr;
+    f_tcp.src_ip = ip->saddr;
     if (flag == -1) {
         tcp->seq = htonl(TCP_INIT_SEQ);
         tcp->ack_seq = 0;//
         tcp->syn = 1;
         tcp->rst = 0;
         /*dest_addr是全局变量，可能在此处被修改，在此处添加一个判断作为测试*/
-        f_tcp.dst_ip = dest_addr.sin_addr.s_addr;
+        f_tcp.dst_ip = ip->daddr;
     }
     else
     {
@@ -134,10 +138,10 @@ int tcp_pack(unsigned short randomport, char sendpacket[],int flag)
         tcp->ack_seq = htonl(ntohl(rst_seq) + 1);//
         tcp->syn = 0;
         tcp->rst = 1;
-        f_tcp.dst_ip = dest_rst_addr.sin_addr.s_addr;
+        f_tcp.dst_ip = ip->daddr;
     }
     f_tcp.zero = 0;
-    f_tcp.protocol = IPPROTO_TCP;
+    f_tcp.protocol = ip->protocol;
     f_tcp.tcp_len = 0;
     /*计算校验和，先将伪首部和首部拼接起来*/
     /*首部最长60字节，伪首部12字节*/
@@ -145,29 +149,29 @@ int tcp_pack(unsigned short randomport, char sendpacket[],int flag)
     struct timeval tv;
     gettimeofday(&tv, NULL);
     /*TCP选项*/
-    tcp_option* tcp_option =(struct tcp_option*)(sendpacket + sizeof(*ip)+sizeof(*tcp));
+    tcp_option* tcp_option = (struct tcp_option*)(sendpacket + sizeof(*ip) + sizeof(*tcp));
     tcp_option->mss.option = 2;
     tcp_option->mss.option_length = 4;
     tcp_option->mss.option_value = htons(1460);
 
-    tcp_option->sack.option = 4;
-    tcp_option->sack.option_length = 2;
+    //tcp_option->sack.option = 4;
+    //tcp_option->sack.option_length = 2;
 
 
 
-    tcp_option->timestamp.option = 8;
-    tcp_option->timestamp.option_length = 10;
-    tcp_option->timestamp.option_value = htonl(tv.tv_sec * 1000 + tv.tv_usec / 1000);
+    //tcp_option->timestamp.option = 8;
+    //tcp_option->timestamp.option_length = 10;
+    //tcp_option->timestamp.option_value = htonl(tv.tv_sec * 1000 + tv.tv_usec / 1000);
 
-    tcp_option->nop.option = 1;
+    //tcp_option->nop.option = 1;
 
-    tcp_option->windowssale.option = 3;
-    tcp_option->windowssale.option_length = 3;
-    tcp_option->windowssale.option_value = 7;
+    //tcp_option->windowssale.option = 3;
+    //tcp_option->windowssale.option_length = 3;
+    //tcp_option->windowssale.option_value = 7;
 
     /*修正上面结构体中有关长度的字段，单独拿出来是方便后续更改*/
     unsigned int tcp_hdr_len = sizeof(*tcp) + sizeof(*tcp_option);
-    tcp->doff = tcp_hdr_len/4;
+    tcp->doff = tcp_hdr_len / 4;
     f_tcp.tcp_len = htons(tcp_hdr_len);
 
     /*计算tcp校验和*/
@@ -176,13 +180,12 @@ int tcp_pack(unsigned short randomport, char sendpacket[],int flag)
     memset(buffers, 0, 256);
     memcpy(buffers, &f_tcp, sizeof(f_tcp));
     memcpy(buffers + sizeof(f_tcp), tcp, sizeof(*tcp));
+
     memcpy(buffers + sizeof(f_tcp) + sizeof(*tcp), tcp_option, sizeof(*tcp_option));
-    tcp->check = cal_chksum((unsigned short*)buffers, packsize);
-    //memset(buffers, 0, 256);
-    //memcpy(buffers, &f_tcp, sizeof(f_tcp));
-    //memcpy(buffers + sizeof(f_tcp), &tcp, sizeof(tcp));
-    //tcp->check = cal_chksum((unsigned short*)buffers, packsize);
+
+    tcp->check = cal_chksum((unsigned short*)buffers, sizeof(f_tcp)+ packsize);
+
     packsize += sizeof(*ip);
-    ip->ip_len = packsize;
+    ip->tot_len = packsize;
     return packsize;
 }

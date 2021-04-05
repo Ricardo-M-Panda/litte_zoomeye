@@ -26,7 +26,7 @@
 #include<time.h>
 #include<math.h>
 /*--------------icmp-----------------*/
-#define PACKET_SIZE     4096
+#define PACKET_SIZE     1024
 #define ICMP_MAX_WAIT_TIME   0.6
 #define MAX_ICMP_NO_PACKETS  3
 #define MAX_IP_ADDRESS  200
@@ -37,12 +37,13 @@
 
 /*--------------tcp------------------*/
 #define TCP_PACKET_DATE_LEN 0
-#define MAX_TCP_PORT_PACKETS 80
-#define TCP_MAX_PACKET_TIME  0.1
+#define MAX_TCP_PORT_PACKETS 1000
+#define TCP_PACKET_WAIT_TIME 0.005
 #define TCP_MAX_WAIT_TIME  5
-#define TCP_SEND_PORT 19999
-#define TCP_INIT_SEQ 0
+#define TCP_SEND_PORT 44628
+#define TCP_INIT_SEQ 1
 #define TCP_WINDOW_SIZE 1024
+#define TCP_SEND_RACE 100
 /*--------------tcp------------------*/
 
 /*---------------------全局变量-------------------------*/
