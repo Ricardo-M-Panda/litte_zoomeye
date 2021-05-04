@@ -70,7 +70,7 @@ void tcp_scan()
     gethostname(hname, sizeof(hname));
     hent = gethostbyname(hname);
     printf("\nhostname: %s\n ", hent->h_name);
-    printf("address is: %s\n", inet_ntoa(*(struct in_addr*)(hent->h_addr)));
+    //printf("address is: %s\n", inet_ntoa(*(struct in_addr*)(hent->h_addr)));
     memcpy((char*)&source_addr.sin_addr, hent->h_addr, hent->h_length);
     source_addr.sin_family = AF_INET;
 
@@ -145,5 +145,7 @@ void tcp_scan()
             perror("wait error");
 
     }
+    
+
     return;
 }

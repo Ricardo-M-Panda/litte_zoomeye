@@ -1,5 +1,6 @@
 #include "scan_lib.h"
 struct sockaddr_in dest_rst_addr;
+
 /*rst_ack_seq是接收包的确认号，rst_seq则是序列号*/
 unsigned int rst_ack_seq,rst_seq;
 
@@ -32,7 +33,7 @@ unsigned int tcp_unpack(char* buf, int len, struct sockaddr_in * from_p ,unsigne
     {
         return -1;
     }
-    /*回复syn+ack则该端口已打开*/
+    /*回复syn+ack则该端口已打开，实际上对方也可能分两次发送，但此处不作考虑*/
     if (tcp->ack==1 && tcp->syn == 1)
     {
 
@@ -40,8 +41,11 @@ unsigned int tcp_unpack(char* buf, int len, struct sockaddr_in * from_p ,unsigne
         dest_rst_addr = *from_p;
         rst_ack_seq = tcp->ack_seq;
         rst_seq = tcp->seq;
+        /*记录下ip和端口*/
+
+
         printf("\n%s port  %d is open \n", inet_ntoa(from_p->sin_addr), ntohs(tcp->source));
-        /*控制权交回给调用程序，使其通过并发回复rst包*/
+        /*控制权交回给调用程序，使其通过并发回复相应的rst包*/
         return ntohl(tcp->seq);
     }
     else
