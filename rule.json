@@ -1,0 +1,41 @@
+    {
+      "name": "Openssh",
+      "key_string": "openssh",
+      "get_version_method": "_[0-9]+([.][0-9 a-z A-Z]+)+([- ][a-z A-Z 0-9]+)?",
+      "get_version_bss": 1
+
+    },
+    {
+      "name": "Mysql",
+      "key_string": "mysql",
+      "get_version_method": "~~~\n[0-9]+([.][0-9 a-z A-Z]+)+([- ][a-z A-Z 0-9]+)?",
+      "get_version_bss": 4
+
+    },
+    {
+      "name": "FileZilla ftpd",
+      "key_string": "filezilla",
+      "get_version_method": "version [0-9]+([.][0-9 a-z A-Z]+)+([- ][a-z A-Z 0-9]+)?",
+      "get_version_bss": 8
+
+    },
+    {
+      "name": "Exim smtpd",
+      "key_string": "esmtp exim",
+      "get_version_method": "exim [0-9]+([.][0-9 a-z A-Z]+)+([- ][a-z A-Z 0-9]+)?",
+      "get_version_bss": 5
+
+    },
+    {
+      "name": "http",
+      "key_string": "http[ /]+[0-9][.][0-9][ ]+[0-9]{3}[ ]*.*[ ]*\r\n\r\n",
+      "get_version_method": "server:[ ]*.*[0-9]+([.][0-9 a-z A-Z]+)+([- ][a-z A-Z 0-9]+)?",
+      "get_version_bss": 0
+
+    }
+
+
+  ]
+
+
+}
