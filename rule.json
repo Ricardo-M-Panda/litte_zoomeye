@@ -1,3 +1,5 @@
+{
+  "protocol": [
     {
       "name": "Openssh",
       "key_string": "openssh",
