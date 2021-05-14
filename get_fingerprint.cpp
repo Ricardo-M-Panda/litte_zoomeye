@@ -9,7 +9,9 @@
 #define RLT_SIZE
 #define RLUE_LEN 200
 #define REV_LEN 100
+/*最大匹配数量*/
 #define MAX_REG 20
+/*组成字符串结束标志的连续的\00数量*/
 #define MAX_ENDING_00 15
 #define HTTP_SERVER_BSS 7
 int  catch_ssh(char rev_msg[]);
@@ -32,16 +34,17 @@ void fingerprint_catch() {
 	if (sock == -1)
 	{
 		perror("socket() error");
+		return;
 	}
 	memset(&serv_adr, 0, sizeof(serv_adr));
 	serv_adr.sin_family = AF_INET;
-	serv_adr.sin_addr.s_addr = inet_addr("118.240.106.105");
-	serv_adr.sin_port = htons(atoi("9200"));
+	serv_adr.sin_addr.s_addr = inet_addr("87.238.248.201");
+	serv_adr.sin_port = htons(atoi("80"));
 
 	if (connect(sock, (struct sockaddr*)&serv_adr, sizeof(serv_adr)) == -1)
 	{
 		perror("coonetct() error");
-		exit;
+		return;
 	}
 
 	else
@@ -49,12 +52,13 @@ void fingerprint_catch() {
 	recv_len = 0;
 	i = 0;
 	/*统一发送相同请求，忽略掉需要正确请求才可获得响应的协议*/
-	char send_mes[] = "GET / HTTP/1.1 \r\n\r\n";
+	char send_mes[] = "GET / HTTP/1.1\r\n\r\n";
 
 	write(sock, send_mes, RLUE_LEN);
 
 	recv_len = read(sock, serv_msg, BUF_SIZE);
 	/**/
+	puts(serv_msg);
 	unsigned int rev_mes_len = strlen(serv_msg);
 	close(sock);
 	/*目标主机响应信息*/
@@ -199,11 +203,13 @@ int catch_ssh(char rev_msg[]){
 /*如果使用了multiple=1，返回值是一个指针数组，使用完毕后该数组的每一项指针都应释放掉*/
 char ** use_reg(char text[],char  reg_str[],bool multiple) {
 	char* text_copy=strdup(text);
-	
+	int i = 0;
 	char* multiple_reg[MAX_REG];
+	for(i=0;i< MAX_REG;i++)
+		multiple_reg[i]=NULL;
 	/*上述数组的计数器*/
 	int multiple_seq = 0;
-	int i;
+
 	char ebuff[256];
 	int ret;
 	int cflags;
@@ -223,7 +229,7 @@ char ** use_reg(char text[],char  reg_str[],bool multiple) {
 		fprintf(stderr, "%s\n", ebuff);
 		goto end;
 	}
-	while (text_copy)
+	while (text_copy&& multiple_seq< MAX_REG)
 	{
 		ret = regexec(&reg, text_copy, MAX_REG, rm, 0);
 		if (ret)
@@ -234,13 +240,13 @@ char ** use_reg(char text[],char  reg_str[],bool multiple) {
 		}
 
 		regerror(ret, &reg, ebuff, 256);
-		fprintf(stderr, "result is:\n%s\n\n", ebuff);
+		fprintf(stderr, "\n\n result is:%s\n\n", ebuff);
 
 		if (rm[0].rm_so > -1)
 		{
 
 			part_str = strndup(text_copy + rm[0].rm_so, rm[0].rm_eo - rm[0].rm_so);
-			fprintf(stderr, "\n@@@@@result: %s @@@@@\n", part_str);
+			fprintf(stderr, "\n@@@@@reg is: %s @@@@@\n", part_str);
 			/*仅一个匹配*/
 			if (!multiple)
 				break;
@@ -259,32 +265,6 @@ char ** use_reg(char text[],char  reg_str[],bool multiple) {
 	free(text_copy);
 	text_copy = NULL;
 
-	//if (multiple)
-	//{
-	//	puts("\nwork!!");
-	//	for (i = 0; i < MAX_REG; i++)
-	//	{
-	//		if (rm[i].rm_so > -1)
-	//		{
-	//			part_str = strndup(text + rm[i].rm_so, rm[i].rm_eo - rm[i].rm_so);
-	//			fprintf(stderr, "\n%d is : %s\n", i, part_str);
-	//			free(part_str);
-	//			part_str = NULL;
-	//		}
-	//	}
-	//}
-	//else if(multiple==0)
-	//{
-	//	/*仅保留第一个最长匹配结果*/
-
-	//	if (rm[0].rm_so > -1)
-	//	{
-	//		part_str = strndup(text + rm[0].rm_so, rm[0].rm_eo - rm[0].rm_so);
-	//		fprintf(stderr, "@@@@@\nresult: %s\n@@@@@", part_str);
-	//	}
-	//}
-
-
 end:
 	regfree(&reg);
 	if(multiple)
@@ -294,32 +274,65 @@ end:
 }
 
 void http_server(char * rev_msg) {
-	//char* next_deli1, next_deli2;
-	//char* deli1 = " ", * deli2 = "/";
-	//char* pToken = strtok_r(server, deli1, &next_deli1);
-	//while (pToken)
-	//{
-	//	ip_list[i] = inet_addr(pToken);
 
-	//	i++;
-	//	pToken = strtok_r(NULL, delimiter, &next_deli);
-
-	//}
-	char* server;
+	char* server,* server_tmp;
 	puts("((((((((((((((((((((((((((((((((((((((((((");
-	server=*use_reg(rev_msg, "server:.+", 0);
+	server_tmp=*use_reg(rev_msg, "server:[^\r\n]+", 0);
+	if (!server_tmp)
+	{
+		printf("\n no server! \n");
+		return;
+	}
+	server = strdup(server_tmp);
+	free(server_tmp);
+	server_tmp = NULL;
+
 	if (!server)
 		return;
 	puts(server);
+
+	char* os_reg,*os_reg_tmp;
+	os_reg_tmp= *use_reg(server, "\\([^\n]+\\)", 0);
+	size_t os_reg_len = strlen(os_reg_tmp);
+	if (os_reg_tmp)
+	{
+
+		memset(strstr(server, os_reg_tmp), ' ', os_reg_len);
+		os_reg = strndup(os_reg_tmp + 1, os_reg_len - 2);
+
+		printf("\nos is %s\n", os_reg);
+		free(os_reg);
+		os_reg = NULL;
+	}
+	puts(server);
+	free(os_reg_tmp);
+	os_reg_tmp = NULL;
+
+
+	int i = 0,j=0;
 	char** multiple_reg;
-	multiple_reg=use_reg(server+ HTTP_SERVER_BSS,"[a-zA-Z_\-]+(/[0-9a-zA-Z\.]+)" , 1);
-	int i=0;
+	multiple_reg=use_reg(server+ HTTP_SERVER_BSS,"[a-zA-Z_\-]+(/[0-9a-zA-Z\.\-]+)?" , 1);
+	
+	char** split_result=NULL; 	
+	bool split_flag = false;
 	while (multiple_reg[i])
 	{
-		//printf("\nreg %d is %s\n", i, multiple_reg[i]);
-		char** split_result;
+		printf("\n%s\n", multiple_reg[i]);
+
 		split_result=get_server_version(multiple_reg[i]);
-		printf("\nserver  %s  id :%d , and the version is %s !\n", split_result[0],i, split_result[1]);
+		bool cmp_flag = strcmp("unknow", split_result[1]);
+		if (i == 0 && cmp_flag)
+			split_flag = true;
+
+		if (split_flag && !cmp_flag)
+		{
+			free(multiple_reg[i]);
+			multiple_reg[i] = NULL;
+			i++;
+			continue;
+		}
+		printf("\nserver  %s  id :%d , and the version is %s !\n", split_result[0], j, split_result[1]);
+		j++;
 		free(multiple_reg[i]);
 		multiple_reg[i] = NULL;
 		i++;
@@ -334,6 +347,8 @@ char** get_server_version(char* buf) {
 	char* delimiter = "/", * next_deli = NULL;
 	char* pToken = strtok_r(buf, delimiter, &next_deli);
 	char* server_version[2];
+	server_version[0] = "unknow";
+	server_version[1] = "unknow";
 	int i = 0;
 	while (pToken)
 	{
