@@ -1,8 +1,11 @@
 #include "scan_lib.h"
+
 struct sockaddr_in dest_rst_addr;
 
 /*rst_ack_seq是接收包的确认号，rst_seq则是序列号*/
 unsigned int rst_ack_seq,rst_seq;
+int sql_insert(char* sql_query);
+int sql_select(char* select_query);
 
 unsigned int tcp_unpack(char* buf, int len, struct sockaddr_in * from_p ,unsigned short * p_dest_port  )
 {
@@ -42,9 +45,30 @@ unsigned int tcp_unpack(char* buf, int len, struct sockaddr_in * from_p ,unsigne
         rst_ack_seq = tcp->ack_seq;
         rst_seq = tcp->seq;
         /*记录下ip和端口*/
-
+        char* icmp_select_query = "select ipv4_address from ip_list";
+        if (sql_select(icmp_select_query))
+        {
+            perror("\n sql select error\n");
+            exit;
+        }
+        while ((row = mysql_fetch_row(sql_result)) != NULL) {
+            printf("ip is %s , ", row);
+            char* num_to_string;
+            sprintf(num_to_string, "%d", ntohs(tcp->source));
+            char insert_query[95];
+            memset(insert_query, 0, sizeof(insert_query));
+            strcat(insert_query, "INSERT INTO `");
+            strcat(insert_query, inet_ntoa(from_p->sin_addr));
+            strcat(insert_query, "` (`port`) VALUES(");
+            strcat(insert_query, num_to_string);
+            strcat(insert_query, ");");
+            sql_insert(insert_query);
+        }
 
         printf("\n%s port  %d is open \n", inet_ntoa(from_p->sin_addr), ntohs(tcp->source));
+        
+        
+        
         /*控制权交回给调用程序，使其通过并发回复相应的rst包*/
         return ntohl(tcp->seq);
     }
@@ -71,12 +95,7 @@ int icmp_unpack(char* buf, int len, struct sockaddr_in* from_p)
     }
     /*确保所接收的是ICMP的回应*/
     if (icmp->icmp_type == ICMP_ECHOREPLY)
-
     {
-        //tvsend = (struct timeval*)icmp->icmp_data;
-        //tv_sub(&tvrecv, tvsend);  /*接收和发送的时间差*/
-        //rtt = tvrecv.tv_sec * 1000 + tvrecv.tv_usec / 1000;  /*以毫秒为单位计算rtt*/
-        /*显示相关信息*/
         if (ip->ip_ttl > 128)
         {
             os = "Unix";
@@ -99,6 +118,16 @@ int icmp_unpack(char* buf, int len, struct sockaddr_in* from_p)
             icmp->icmp_seq,
             ip->ip_ttl,
             os);
+        /*将结果记录在数据库中*/
+
+        char insert_query[100];
+        memset(insert_query, 0, sizeof(insert_query));
+        strcat(insert_query, "INSERT INTO ip_list ( ipv4_address,ping_os)VALUES('");
+        strcat(insert_query, inet_ntoa(from_p->sin_addr));
+        strcat(insert_query, "','");
+        strcat(insert_query, os);
+        strcat(insert_query, "')");
+        sql_insert(insert_query);
         return 1;
     }
     else

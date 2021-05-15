@@ -19,6 +19,7 @@ void send_icmp_packet(pid_t pid)
             return;
         }
     }
+    usleep(ICMP_SEND_RACE);
 }
 
 void send_tcp_packet()

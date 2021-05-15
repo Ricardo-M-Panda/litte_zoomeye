@@ -33,9 +33,6 @@ void tcp_scan()
         printf("ip list is none");
         exit;
     }
-
-
-
     struct hostent* host;
     struct protoent* protocol;
     unsigned long inaddr = 0;

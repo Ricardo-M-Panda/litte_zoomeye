@@ -25,19 +25,22 @@
 #include <linux/tcp.h>
 #include<time.h>
 #include<math.h>
+#include "cJSON.h"
+#include <mysql.h>
 /*--------------icmp-----------------*/
 #define PACKET_SIZE     1024
 #define ICMP_MAX_WAIT_TIME   0.6
-#define MAX_ICMP_NO_PACKETS  3
+#define MAX_ICMP_NO_PACKETS  1
 #define MAX_IP_ADDRESS  200
 #define ICMP_PACKET_DATE_LEN 56
+#define ICMP_SEND_RACE 1000
 /*定义网卡，用来开启混杂模式*/
 #define ETH_NAME    "eth1"
 /*--------------icmp-----------------*/
 
 /*--------------tcp------------------*/
 #define TCP_PACKET_DATE_LEN 0
-#define MAX_TCP_PORT_PACKETS 1000
+#define MAX_TCP_PORT_PACKETS 500
 #define TCP_PACKET_WAIT_TIME 0.005
 #define TCP_MAX_WAIT_TIME  5
 #define TCP_SEND_PORT 44628
@@ -52,7 +55,10 @@ extern struct sockaddr_in source_addr ,dest_addr ;
 
 /*---------------------全局变量-------------------------*/
 
-/*-----------------------------------------------------*/
+/*-----------------------sql---------------------------*/
+extern MYSQL conn;
+extern int res;
+extern MYSQL_RES* sql_result;
+extern MYSQL_ROW row;
 
-
-/*-----------------------------------------------------*/
+/*-----------------------sql---------------------------*/

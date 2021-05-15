@@ -1,5 +1,3 @@
-#include "cJSON.h"
-#include "cJSON.c"
 #include "scan_lib.h"
 
 #include <ctype.h>
@@ -14,7 +12,7 @@
 /*组成字符串结束标志的连续的\00数量*/
 #define MAX_ENDING_00 15
 #define HTTP_SERVER_BSS 7
-int  catch_ssh(char rev_msg[]);
+int  catch_fingerprint(char rev_msg[]);
 char** get_server_version(char* buf);
 
 #define RULE_SIZE 2048
@@ -103,7 +101,7 @@ void fingerprint_catch() {
 
 
 
-	catch_ssh(serv_msg);
+	catch_fingerprint(serv_msg);
 	/*分析协议*/
 
 
@@ -114,7 +112,7 @@ void fingerprint_catch() {
 /*协议上层组件分析，仅针对http上层应用*/
 
 /*获取banner中的版本号*/
-int catch_ssh(char rev_msg[]){
+int  catch_fingerprint(char rev_msg[]){
 	FILE* fp;
 	char str[RULE_SIZE];
 	char* str_p;
