@@ -7,12 +7,13 @@
 #define RLT_SIZE
 #define RLUE_LEN 200
 #define REV_LEN 100
+#define MAX_REV_LEN 4096
 /*最大匹配数量*/
 #define MAX_REG 20
 /*组成字符串结束标志的连续的\00数量*/
 #define MAX_ENDING_00 15
 #define HTTP_SERVER_BSS 7
-int  catch_fingerprint(char rev_msg[]);
+int  catch_fingerprint(char rev_msg[], char* finger_ip, char* finger_port,char* serv_msg_bak);
 char** get_server_version(char* buf);
 
 #define RULE_SIZE 2048
@@ -20,8 +21,10 @@ char** get_server_version(char* buf);
 void fingerprint_catch(char* finger_ip, char* finger_port);
 char** use_reg(char text[], char  reg_str[], bool multiple);
 
-void http_server(char* server);
+void http_server(char* server , char* finger_port, char* ip);
 MYSQL_RES* sql_select(char* select_query);
+int sql_insert(char* sql_query);
+int sql_update(char* update_sql_query);
 /*向开放端口发起连接，（发送请求报文后）读取其回复报文*/
 /*此函数有纰漏，超时会阻塞*/
 void fingerprint_protoctol() {
@@ -100,7 +103,8 @@ void fingerprint_catch(char *finger_ip,char* finger_port) {
 	write(sock, send_mes, RLUE_LEN);
 
 	recv_len = read(sock, serv_msg, BUF_SIZE);
-	/**/
+
+	
 	puts(serv_msg);
 	unsigned int rev_mes_len = strlen(serv_msg);
 	close(sock);
@@ -122,14 +126,16 @@ void fingerprint_catch(char *finger_ip,char* finger_port) {
 		}
 		len = rev_mes_len + count_i - MAX_ENDING_00;
 	}
-
+	/*由于数据库中banner设置最长为4096，所以此处应该做下检测*/
+	len = len < MAX_REV_LEN ? len:MAX_REV_LEN;
 	printf("\n\n");
 
 	
 	/*ip、端口、banner存入数据库*/
 
-
-
+	char* serv_msg_bak = NULL;
+	serv_msg_bak= strndup(serv_msg,len);
+	
 	///*全文转小写，方便对比*/
 	for (i = 0; i < len; i++)
 	{
@@ -138,7 +144,7 @@ void fingerprint_catch(char *finger_ip,char* finger_port) {
 		{
 			serv_msg[i] = 126;
 		}
-		serv_msg[i] = tolower(serv_msg[i]);
+		//serv_msg[i] = tolower(serv_msg[i]);
 
 	}
 	puts(serv_msg);
@@ -146,7 +152,7 @@ void fingerprint_catch(char *finger_ip,char* finger_port) {
 
 
 
-	catch_fingerprint(serv_msg);
+	catch_fingerprint(serv_msg, finger_ip, finger_port, serv_msg_bak);
 	/*分析协议*/
 
 
@@ -157,7 +163,7 @@ void fingerprint_catch(char *finger_ip,char* finger_port) {
 /*协议上层组件分析，仅针对http上层应用*/
 
 /*获取banner中的版本号*/
-int  catch_fingerprint(char rev_msg[]){
+int  catch_fingerprint(char rev_msg[], char* finger_ip, char* finger_port,char* serv_msg_bak){
 	FILE* fp;
 	char str[RULE_SIZE];
 	char* str_p;
@@ -186,6 +192,7 @@ int  catch_fingerprint(char rev_msg[]){
 	int array_size = cJSON_GetArraySize(js_protocol);
 	printf("array size is %d\n", array_size);
 	int i = 0;
+	char* result_verion=NULL, * result_protoctol=NULL;
 	for (int i = 0; i < array_size; i++) 
 	{
 		cJSON* item = cJSON_GetArrayItem(js_protocol, i);
@@ -198,18 +205,49 @@ int  catch_fingerprint(char rev_msg[]){
 		{
 			/*确定出协议类别后，尝试抓取它的版本*/
 			char* banner_ver_tmp=NULL, *banner_ver=NULL;
+			result_protoctol = strdup(name->valuestring);
 			if (banner_ver_tmp = *use_reg(rev_msg, get_version_method->valuestring,0))
 			{
 				banner_ver = strdup(banner_ver_tmp+ get_version_bss->valueint);
 				fprintf(stderr, "protocol is %s,and the version is :%s", name->valuestring, banner_ver);
+				result_verion = strdup(banner_ver);
 			}
 			else
-				fprintf(stderr, "protocol is %s", name->valuestring);
+			{
+				fprintf(stderr, "protocol is %s ,version is unknow", name->valuestring);
+				result_verion = strdup("unknow");
+			}
+				
 			printf("\n\n!!!!!!!!\n\n");
+
+	
+			/*存进数据库*/
+			
+			char port_info_update[4200];
+			memset(port_info_update, 0, sizeof(port_info_update));
+			strcat(port_info_update, "UPDATE `");
+			strcat(port_info_update, finger_ip);
+			strcat(port_info_update, "` SET `banner` = '");
+			strcat(port_info_update, serv_msg_bak);
+			strcat(port_info_update, "', `protocol` = '");
+			strcat(port_info_update, result_protoctol);
+			strcat(port_info_update, "', `pro_version` = '");
+			strcat(port_info_update, result_verion);
+			strcat(port_info_update, "' WHERE `port` = ");
+			strcat(port_info_update, finger_port);
+			printf("\n!!!!!!I AM BANNER!!!!!!%s\n", serv_msg_bak);
+
+			sql_update(port_info_update);
+			/*free掉之前申请的空间*/
+			free(serv_msg_bak); serv_msg_bak = NULL;
+			free(result_protoctol); result_protoctol = NULL;
+			free(result_verion); result_verion = NULL;
+
+
 			if (!strcmp(name->valuestring, "http"))
 			{
 				puts("\n$$$$$$$$$$$$$$$$$$$$$\n");
-				http_server(rev_msg);
+				http_server(rev_msg,finger_port, finger_ip);
 			}
 			free(first_char);
 			free(banner_ver_tmp);
@@ -300,7 +338,7 @@ end:
 		return &part_str;
 }
 
-void http_server(char * rev_msg) {
+void http_server(char * rev_msg,char* finger_port, char* finger_ip) {
 
 	char* server,* server_tmp;
 	puts("((((((((((((((((((((((((((((((((((((((((((");
@@ -357,7 +395,22 @@ void http_server(char * rev_msg) {
 			i++;
 			continue;
 		}
+
 		printf("\nserver  %s  id :%d , and the version is %s !\n", split_result[0], j, split_result[1]);
+		/*存储server进数据表*/	
+		char insert_server_sql [200];
+		memset(insert_server_sql, 0, sizeof(insert_server_sql));
+		strcat(insert_server_sql, "INSERT INTO `server_list`(`server_name`, `ip`, `port`, `version`) VALUES('");
+		strcat(insert_server_sql, split_result[0]);
+		strcat(insert_server_sql, "', '");
+		strcat(insert_server_sql, finger_ip);
+		strcat(insert_server_sql, "', '");
+		strcat(insert_server_sql, finger_port);
+		strcat(insert_server_sql, "', '");
+		strcat(insert_server_sql, split_result[1]);
+		strcat(insert_server_sql, "')");
+		sql_insert(insert_server_sql);
+
 		j++;
 		free(multiple_reg[i]);
 		multiple_reg[i] = NULL;

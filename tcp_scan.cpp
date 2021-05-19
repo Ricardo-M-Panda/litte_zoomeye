@@ -11,7 +11,7 @@ void tcp_recv_packet(unsigned int ip_list_len);
 unsigned int get_ipList(char* filename, in_addr_t ip_list[]);
 int do_promisc(void);
 int check_nic(void);
-
+MYSQL_RES* sql_select(char* select_query);
 //void tv_sub(struct timeval* out, struct timeval* in);
 
 
@@ -103,24 +103,22 @@ void tcp_scan()
         bzero(&dest_addr, sizeof(dest_addr));
         dest_addr.sin_family = AF_INET;
 
-        printf("\n--------------------START-------------------\n");
-        i = 0;
-        while ((inaddr = ip_list[i]) != 0&&i< ip_list_len)
+        char* sql_ip_table = "SELECT `ipv4_address` FROM `ip_list` ";
+
+        MYSQL_RES* sql_result;
+        MYSQL_ROW row;
+        if (!(sql_result = sql_select(sql_ip_table)))
         {
-            /*判断是主机名还是ip地址*/
-            if (inaddr == INADDR_NONE)
-            {
-                if ((host = gethostbyname(hostname)) == NULL)
-                {
-                    perror("gethostbyname error");
-                    exit(1);
-                }
-                /*是主机名*/
-                memcpy((char*)&dest_addr.sin_addr, host->h_addr, host->h_length);
-            }
-            else    /*是ip地址*/
-                dest_addr.sin_addr.s_addr = inaddr;
-            printf("TCP SCAN %s(%s): %d bytes data in SYN packets.\n", inet_ntoa(dest_addr.sin_addr),
+            perror("\n sql select error\n");
+            exit;
+        }
+        printf("\n--------------------START-------------------\n");
+        while ((row = mysql_fetch_row(sql_result)) != NULL) {
+            printf("ip is %s ", row[0]);
+            inaddr = inet_addr(row[0]);
+            dest_addr.sin_addr.s_addr = inaddr;
+            printf("TCP SCAN %s(%s): %d bytes data in SYN packets.\n",
+                inet_ntoa(dest_addr.sin_addr),
                 inet_ntoa(dest_addr.sin_addr), datalen);
             send_tcp_packet();  /*发送所有TCP报文*/
             i++;

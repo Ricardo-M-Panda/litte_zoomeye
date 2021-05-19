@@ -1,17 +1,13 @@
 #include "scan_lib.h"
 
 void send_icmp_packet( pid_t pid );
-
 /*ip_list_len为待扫描ip项目数，此处用来告知接收进程最少应接收的数据包数量*/
 void icmp_recv_packet( unsigned int ip_list_len);
-
 /*获取待扫描ip清单*/
 /*文件中读取ip（临时）*/
 unsigned int get_ipList(char* filename, in_addr_t ip_list[]);
 int do_promisc(void);
 int check_nic(void);
-
-
 
 /*扫描主函数*/
 void icmp_scan()
@@ -30,7 +26,6 @@ void icmp_scan()
         printf("ip list is none");
         exit;
     }
-
     /*双进程，一发一收*/
     pid = fork();
     if (pid < 0)
@@ -83,7 +78,6 @@ void icmp_scan()
         i = 0;
         while ((inaddr = ip_list[i]) != 0)
         {
-            /*判断是主机名还是ip地址*/
             if (inaddr == INADDR_NONE)
             {
                 if ((host = gethostbyname(hostname)) == NULL) 

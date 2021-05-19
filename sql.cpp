@@ -60,6 +60,19 @@ int sql_insert(char * sql_query) {
         return -1;
     }
 }
+int sql_update(char* update_sql_query) {
+    printf("\nSQL语句: %s\n", update_sql_query);
+    res = mysql_query(&conn, update_sql_query);
+    if (!res) {
+        printf("数据修改成功 ：update %lu rows\n", (unsigned long)mysql_affected_rows(&conn));
+        return 0;
+    }
+    else {
+        fprintf(stderr, "数据修改失败\n");
+        return -1;
+    }
+}
+
 MYSQL_RES*  sql_select(char * select_query) {
     MYSQL_RES* sql_result;
     printf("SQL语句: %s\n", select_query);

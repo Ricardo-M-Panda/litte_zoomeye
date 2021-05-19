@@ -16,11 +16,6 @@ tcp_result_list*  tcp_unpack(char* buf, int len, struct sockaddr_in* from_p, uns
     char* os;
 
     ip = (struct ip*)buf;
-    //printf("\ndst ip :%s\n", inet_ntoa(ip->ip_dst));
-    //printf("\nsrc ip :%s\n", inet_ntoa(ip->ip_src));
-
-
-
 
     iphdrlen = ip->ip_hl << 2;    /*求ip报头长度,即ip报头的长度标志乘4*/
     tcp = (struct tcphdr*)(buf + iphdrlen);  /*越过ip报头,指向TCP报头*/
@@ -84,7 +79,6 @@ icmp_result_list* icmp_unpack(char* buf, int len, struct sockaddr_in* from_p)
     if (icmp->icmp_type == ICMP_ECHOREPLY)
 
     {
-
         if (ip->ip_ttl > 128)
         {
             os = "Unix";

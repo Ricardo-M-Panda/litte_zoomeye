@@ -3,7 +3,6 @@
 unsigned int  get_ipList(char* filename, in_addr_t ip_list[]) {
     /*这个数组是用来存储被inet_addr函数转换的网络地址的*/
 /*注意返回值虽然有的地方说明是unsigned long相同，但那是32位long*/
-    
     int fd = open(filename, O_RDWR);
     unsigned int i = 0;
     if (fd == -1)
@@ -32,9 +31,7 @@ unsigned int  get_ipList(char* filename, in_addr_t ip_list[]) {
             i++;
             pToken = strtok_r(NULL, delimiter, &next_deli);
         }
-
         close(fd);
-
     }
     return i;
 

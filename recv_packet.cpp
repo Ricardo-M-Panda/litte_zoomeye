@@ -24,12 +24,7 @@ void icmp_recv_packet( unsigned int ip_list_len)
     head->ipaddress = NULL;
     head->next = NULL;
     end=head;
-    
-
-
-
     struct sockaddr_in from;
-
     char recvpacket[PACKET_SIZE];
     int n, nreceived = 0, all_packet = (ip_list_len * MAX_ICMP_NO_PACKETS);
     socklen_t fromlen;
@@ -57,7 +52,6 @@ void icmp_recv_packet( unsigned int ip_list_len)
             perror("recvfrom error");
             continue;
         }
- 
         node_tmp = icmp_unpack(recvpacket, n, &from);
         if (!node_tmp)
             continue;
@@ -87,9 +81,7 @@ void icmp_recv_packet( unsigned int ip_list_len)
     {
         node_tmp = node;
         printf("\n os is : %s, ipv4 is %s\n", node->icmp_os, node->ipaddress);
-
         /*将结果记录在数据库中*/
-
         char insert_query[100];
         memset(insert_query, 0, sizeof(insert_query));
         strcat(insert_query, "INSERT INTO ip_list ( ipv4_address,ping_os)VALUES('");
