@@ -14,7 +14,7 @@ unsigned int  get_ipList(char* filename, in_addr_t ip_list[]) {
     {
         /*打印文件描述符号*/
         printf("success fd = %d\n", fd);
-        char buf[200], * next_deli = NULL, * delimiter = ",";
+        char buf[MAX_IP_ADDRESS], * next_deli = NULL, * delimiter = ",";
 
         int  str_len;
         read(fd, buf, 200);

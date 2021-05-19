@@ -1,5 +1,4 @@
 #include "scan_lib.h"
-/*发送三个ICMP报文*/
 
 int icmp_pack(int pack_no, pid_t pid, char sendpacket[]);
 int tcp_pack(unsigned short randomport, char sendpacket[], int flag);
@@ -43,9 +42,7 @@ void send_tcp_packet()
     
     for (i = 0; i < n; i++) {
         nsend++;
-
             send_one_packet(random_ports[i+1], sendpacket, -1);
-        
     }
 }
 

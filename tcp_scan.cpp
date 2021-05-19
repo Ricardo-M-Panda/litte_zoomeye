@@ -105,7 +105,7 @@ void tcp_scan()
 
         printf("\n--------------------START-------------------\n");
         i = 0;
-        while ((inaddr = ip_list[i]) != 0)
+        while ((inaddr = ip_list[i]) != 0&&i< ip_list_len)
         {
             /*判断是主机名还是ip地址*/
             if (inaddr == INADDR_NONE)
@@ -129,8 +129,7 @@ void tcp_scan()
         /*阻塞，等待接收进程结束并回收它*/
         int status;
         pid_t child_finish_pid = wait(&status);
-
-        int sta = WEXITSTATUS(status);
+        int sta = WIFEXITED(status);
         if (child_finish_pid != -1)
         {
             if (sta != 0)
@@ -142,7 +141,7 @@ void tcp_scan()
             perror("wait error");
 
     }
-    
+
 
     return;
 }

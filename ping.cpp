@@ -11,7 +11,6 @@ unsigned int get_ipList(char* filename, in_addr_t ip_list[]);
 int do_promisc(void);
 int check_nic(void);
 
-//void tv_sub(struct timeval* out, struct timeval* in);
 
 
 /*扫描主函数*/
@@ -31,7 +30,6 @@ void icmp_scan()
         printf("ip list is none");
         exit;
     }
-
 
     /*双进程，一发一收*/
     pid = fork();
@@ -123,18 +121,6 @@ void icmp_scan()
     return;
 }
 
-
-///*两个timeval结构相减*/
-//void tv_sub(struct timeval* out, struct timeval* in)
-//{
-//    if ((out->tv_usec -= in->tv_usec) < 0)
-//    {
-//        --out->tv_sec;
-//        out->tv_usec += 1000000;
-//    }
-//    out->tv_sec -= in->tv_sec;
-//}
-///*------------- The End -----------*/
 
 
 

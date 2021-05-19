@@ -1,11 +1,13 @@
 #include "scan_lib.h"
 extern pid_t send_rst_pid;
+extern bool icmp_recv_flag, tcp_recv_flag;
 /*接收进程的闹钟声*/
 void alarm_handler(int sig)
 {
     printf("\n--------------------END-------------------\n");
-    close(sockfd);
-    exit(1);
+    icmp_recv_flag = 0;
+    tcp_recv_flag = 0;
+    return;
 
 }
 void child_handler(int sig)

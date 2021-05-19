@@ -17,12 +17,56 @@ char** get_server_version(char* buf);
 
 #define RULE_SIZE 2048
 /*此函数使用过后，所返回的指针需要释放掉*/
+void fingerprint_catch(char* finger_ip, char* finger_port);
 char** use_reg(char text[], char  reg_str[], bool multiple);
 
 void http_server(char* server);
+MYSQL_RES* sql_select(char* select_query);
 /*向开放端口发起连接，（发送请求报文后）读取其回复报文*/
 /*此函数有纰漏，超时会阻塞*/
-void fingerprint_catch() {
+void fingerprint_protoctol() {
+
+	/*查询每个ip的端口*/
+	char* sql_ip_table = "SELECT `ipv4_address` FROM `ip_list` ";
+	
+	MYSQL_RES* sql_result;
+	MYSQL_ROW row;
+	if (!(sql_result=sql_select(sql_ip_table)))
+	{
+		perror("\n sql select error\n");
+		exit;
+	}
+
+	while ((row = mysql_fetch_row(sql_result)) != NULL) {
+		printf("ip is %s ", row[0]);
+
+		char sql_port[40];
+		memset(sql_port, 0, sizeof(sql_port));
+		strcat(sql_port, "SELECT `port` FROM `");
+		strcat(sql_port, row[0]);
+		strcat(sql_port, "`");
+		MYSQL_RES* sql_port_res;
+		MYSQL_ROW row_port;
+
+		if (!(sql_port_res=sql_select(sql_port)))
+		{
+			perror("\n sql select error\n");
+			continue;
+		}
+		printf("\nselect ip is %s \n",row[0]);
+		while ((row_port = mysql_fetch_row(sql_port_res)) != NULL) {
+			printf("\nselect ip is %s port is %s\n", row[0],row_port[0]);
+			fingerprint_catch(row[0], row_port[0]);
+		}
+
+	}
+	//char* the_ip = "47.111.11.142";
+	//unsigned short the_port = 22;
+
+}
+
+
+void fingerprint_catch(char *finger_ip,char* finger_port) {
 
 	int sock;
 	char serv_msg[BUF_SIZE];
@@ -36,8 +80,9 @@ void fingerprint_catch() {
 	}
 	memset(&serv_adr, 0, sizeof(serv_adr));
 	serv_adr.sin_family = AF_INET;
-	serv_adr.sin_addr.s_addr = inet_addr("87.238.248.201");
-	serv_adr.sin_port = htons(atoi("80"));
+
+	serv_adr.sin_addr.s_addr = inet_addr(finger_ip);
+	serv_adr.sin_port = htons(atoi(finger_port));
 
 	if (connect(sock, (struct sockaddr*)&serv_adr, sizeof(serv_adr)) == -1)
 	{
@@ -62,7 +107,7 @@ void fingerprint_catch() {
 	/*目标主机响应信息*/
 	/*响应信息长度*/
 	unsigned int len= rev_mes_len;
-	/*获取响应信息的真实长度,防止被信息中的\x00符号误导,这里以 MAX_ENDING_00 即 10 个连续\x00作为结束符*/
+	/*获取响应信息的真实长度,防止被信息中的\x00符号误导,这里以 MAX_ENDING_00 即 15 个连续\x00作为结束符*/
 	int count_00=0,count_i=0;
 	if (rev_mes_len < REV_LEN)
 	{
@@ -144,32 +189,15 @@ int  catch_fingerprint(char rev_msg[]){
 	for (int i = 0; i < array_size; i++) 
 	{
 		cJSON* item = cJSON_GetArrayItem(js_protocol, i);
-		//char *str = cJSON_PrintUnformatted(item);
 		cJSON* name = cJSON_GetObjectItem(item, "name");
-		//printf("name type is %d\n", name->type);
-		//printf("name:%s\n", name->valuestring);
-
 		cJSON* key_string = cJSON_GetObjectItem(item, "key_string");
-		//printf("key_string type is %d\n", key_string->type);
-		//printf("key_string:%s\n", key_string->valuestring);
-
 		cJSON* get_version_method = cJSON_GetObjectItem(item, "get_version_method");
-		//printf("get_version_method type is %d\n", get_version_method->type);
-		//printf("get_version_method:%s\n", get_version_method->valuestring);
-
 		cJSON* get_version_bss = cJSON_GetObjectItem(item, "get_version_bss");
-		//printf("get_version_bss type is %d\n", get_version_bss->type);
-		//printf("get_version_bss:%d\n", get_version_bss->valueint);
-
-		//char* first_char = strstr(rev_msg, key_string->valuestring);
 		char* first_char = *use_reg(rev_msg, key_string->valuestring,0);
-		/*char reg_str[] = "[0-9]+([.][0-9 a-z A-Z]+)+([- ][a-z A-Z 0-9]+)?";*/
 		if (first_char)	
 		{
-
-
 			/*确定出协议类别后，尝试抓取它的版本*/
-			char* banner_ver_tmp, *banner_ver;
+			char* banner_ver_tmp=NULL, *banner_ver=NULL;
 			if (banner_ver_tmp = *use_reg(rev_msg, get_version_method->valuestring,0))
 			{
 				banner_ver = strdup(banner_ver_tmp+ get_version_bss->valueint);
@@ -185,7 +213,8 @@ int  catch_fingerprint(char rev_msg[]){
 			}
 			free(first_char);
 			free(banner_ver_tmp);
-			free(banner_ver);
+			if(banner_ver)
+				free(banner_ver);
 			first_char = NULL;
 			banner_ver = NULL;
 			banner_ver_tmp = NULL;
@@ -289,28 +318,27 @@ void http_server(char * rev_msg) {
 		return;
 	puts(server);
 
-	char* os_reg,*os_reg_tmp;
-	os_reg_tmp= *use_reg(server, "\\([^\n]+\\)", 0);
-	size_t os_reg_len = strlen(os_reg_tmp);
-	if (os_reg_tmp)
+	char* os_reg=NULL,*os_reg_tmp=NULL;
+	if (os_reg_tmp = *use_reg(server, "\\([^\n]+\\)", 0))
 	{
-
-		memset(strstr(server, os_reg_tmp), ' ', os_reg_len);
-		os_reg = strndup(os_reg_tmp + 1, os_reg_len - 2);
-
-		printf("\nos is %s\n", os_reg);
-		free(os_reg);
-		os_reg = NULL;
+		size_t os_reg_len = strlen(os_reg_tmp);
+		if (os_reg_tmp)
+		{
+			memset(strstr(server, os_reg_tmp), ' ', os_reg_len);
+			os_reg = strndup(os_reg_tmp + 1, os_reg_len - 2);
+			printf("\nos is %s\n", os_reg);
+			free(os_reg);
+			os_reg = NULL;
+		}
 	}
+	
 	puts(server);
 	free(os_reg_tmp);
 	os_reg_tmp = NULL;
 
-
 	int i = 0,j=0;
 	char** multiple_reg;
 	multiple_reg=use_reg(server+ HTTP_SERVER_BSS,"[a-zA-Z_\-]+(/[0-9a-zA-Z\.\-]+)?" , 1);
-	
 	char** split_result=NULL; 	
 	bool split_flag = false;
 	while (multiple_reg[i])

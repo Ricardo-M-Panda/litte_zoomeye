@@ -29,24 +29,45 @@
 #include <mysql.h>
 /*--------------icmp-----------------*/
 #define PACKET_SIZE     1024
-#define ICMP_MAX_WAIT_TIME   0.6
+#define ICMP_MAX_WAIT_TIME   15
+#define ICMP_PACKET_WAIT_TIME   0.4
 #define MAX_ICMP_NO_PACKETS  1
 #define MAX_IP_ADDRESS  200
 #define ICMP_PACKET_DATE_LEN 56
-#define ICMP_SEND_RACE 1000
+#define ICMP_SEND_RACE 100
 /*定义网卡，用来开启混杂模式*/
 #define ETH_NAME    "eth1"
+
+/*用来储存icmp结果的链表*/
+typedef struct icmp_ip_list {
+    char* ipaddress;
+    char* icmp_os;
+    struct icmp_ip_list* next;
+}icmp_result_list;
+
 /*--------------icmp-----------------*/
 
 /*--------------tcp------------------*/
 #define TCP_PACKET_DATE_LEN 0
 #define MAX_TCP_PORT_PACKETS 500
 #define TCP_PACKET_WAIT_TIME 0.005
-#define TCP_MAX_WAIT_TIME  5
+#define TCP_MAX_WAIT_TIME  10
 #define TCP_SEND_PORT 44628
 #define TCP_INIT_SEQ 1
 #define TCP_WINDOW_SIZE 1024
-#define TCP_SEND_RACE 100
+#define TCP_SEND_RACE 200
+
+
+typedef struct tcp_result_list {
+    char* ip=NULL;
+    unsigned short port=0;
+    char* banner=NULL;
+    char* protocol = NULL;
+    char* pro_version = NULL;
+    struct tcp_result_list* next = NULL;
+
+}tcp_result_list;
+
 /*--------------tcp------------------*/
 
 /*---------------------全局变量-------------------------*/
@@ -58,7 +79,6 @@ extern struct sockaddr_in source_addr ,dest_addr ;
 /*-----------------------sql---------------------------*/
 extern MYSQL conn;
 extern int res;
-extern MYSQL_RES* sql_result;
-extern MYSQL_ROW row;
+
 
 /*-----------------------sql---------------------------*/

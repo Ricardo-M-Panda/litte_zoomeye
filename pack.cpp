@@ -102,8 +102,6 @@ int tcp_pack(unsigned short randomport, char sendpacket[], int flag)
     tcp->source = source_addr.sin_port;
     tcp->dest = htons((unsigned short)randomport);
 
-
-
     tcp->res1 = 0;
     /* 先置0*/
     tcp->doff = 0;
