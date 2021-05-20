@@ -10,19 +10,9 @@ void sql_close();
 int sql_insert(char* sql_query);
 void creat_ipaddress_table(char* row);
 void creat_ip_list_table();
-
+void final_sql();
 struct sockaddr_in dest_addr, source_addr;
 
-//main(){
-//		if (sql_init())
-//	{
-//		perror("\n connect mysql error\n");
-//		exit;
-//	}
-//	fingerprint_protoctol();
-//		sql_close();
-//
-//}
 
 main() {
 	if (sql_init())
@@ -39,7 +29,8 @@ main() {
 
 	fingerprint_protoctol();
 
+	final_sql();
+
 	sql_close();
 
 }
-//

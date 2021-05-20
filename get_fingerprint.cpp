@@ -134,7 +134,24 @@ void fingerprint_catch(char *finger_ip,char* finger_port) {
 	/*ip、端口、banner存入数据库*/
 
 	char* serv_msg_bak = NULL;
-	serv_msg_bak= strndup(serv_msg,len);
+	/*拷贝一份响应报文的备份，供后续上传数据库使用*/
+	/*但是应先对报文进行预处理，将报文中的单引号转换为两个单引号，防止sql语句被截断*/
+	/*首先统计报文中的单引号数量*/
+	serv_msg_bak = (char*)malloc(len);
+	for (int i = 0, j = 0, k = -1; i < len,j<len; i++, j++)
+	{
+		serv_msg_bak[j] = serv_msg[i];
+
+		if (serv_msg[i] == 39)
+		{
+			j++;
+			serv_msg_bak[j] = 39;
+		}
+	}
+	printf("\nthis is %s\n", serv_msg_bak);
+	//free(serv_msg_bak);
+	//serv_msg_bak = NULL;
+
 	
 	///*全文转小写，方便对比*/
 	for (i = 0; i < len; i++)

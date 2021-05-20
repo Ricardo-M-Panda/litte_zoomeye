@@ -91,20 +91,15 @@ MYSQL_RES*  sql_select(char * select_query) {
         }
     }
 }
-int sql_delete() {
-    char str1[20];
-    char delete_query[50] = "delete from person where name='";
-    printf("姓名\n");
-    scanf("%s", str1);
-    strcat(delete_query, str1);
-    strcat(delete_query, "'");
-    printf("SQL语句: %s\n", delete_query);
+int sql_delete(char *delete_query) {
+
+    printf("\nSQL语句: %s\n", delete_query);
     res = mysql_real_query(&conn, delete_query, (unsigned int)strlen(delete_query));
     if (!res) {
-        printf("delete successful\n");
+        printf("\n删除成功\n");
     }
     else {
-        printf("delete error\n");
+        printf("\n删除失败\n");
     }
 }
 
@@ -123,8 +118,16 @@ void creat_ip_list_table() {
 	    creat_ipaddress_table(row[0]);
     }
 }
-
-int sql_pro()
+void  final_sql()
 {
+    char* insert_query = "INSERT INTO `final_ip_list` SELECT * FROM `ip_list` ";
+    char* delete_query = "DELETE FROM `ip_list`";
+    if (!sql_insert(insert_query))
+    {
+        sql_delete(delete_query);
+        puts("all right!");
+    }
+    else
+        puts("finally wrong!");
 
 }

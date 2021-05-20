@@ -78,17 +78,17 @@ void icmp_scan()
         i = 0;
         while ((inaddr = ip_list[i]) != 0)
         {
-            if (inaddr == INADDR_NONE)
-            {
-                if ((host = gethostbyname(hostname)) == NULL) 
-                {
-                    perror("gethostbyname error");
-                    exit(1);
-                }
-                /*是主机名*/
-                memcpy((char*)&dest_addr.sin_addr, host->h_addr, host->h_length);
-            }
-            else    /*是ip地址*/
+        //    if (inaddr == INADDR_NONE)
+        //    {
+        //        if ((host = gethostbyname(hostname)) == NULL) 
+        //        {
+        //            perror("gethostbyname error");
+        //            exit(1);
+        //        }
+        //        /*是主机名*/
+        //        memcpy((char*)&dest_addr.sin_addr, host->h_addr, host->h_length);
+        //    }
+        //    else    /*是ip地址*/
                 dest_addr.sin_addr.s_addr = inaddr;
             printf("PING %s(%s): %d bytes data in ICMP packets.\n", inet_ntoa(dest_addr.sin_addr),
                 inet_ntoa(dest_addr.sin_addr), datalen);

@@ -165,7 +165,6 @@ void tcp_recv_packet(unsigned int ip_list_len)
         if (!node_tmp)
             continue;
 
-
             send_rst_pid = fork();
             if (send_rst_pid < 0)
             {

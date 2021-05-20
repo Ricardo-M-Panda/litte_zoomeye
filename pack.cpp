@@ -74,8 +74,6 @@ int icmp_pack(int pack_no, pid_t pid, char sendpacket[])
 /*设置TCP报头*/
 int tcp_pack(unsigned short randomport, char sendpacket[], int flag)
 {
-
-
     int i, packsize;
     /*设置IP头*/
     struct iphdr* ip = (struct iphdr*)sendpacket;
@@ -101,14 +99,11 @@ int tcp_pack(unsigned short randomport, char sendpacket[], int flag)
     tcp = (struct tcphdr*)(sendpacket + sizeof(*ip));
     tcp->source = source_addr.sin_port;
     tcp->dest = htons((unsigned short)randomport);
-
     tcp->res1 = 0;
     /* 先置0*/
     tcp->doff = 0;
     tcp->fin = 0;
     /*根据flag判断发送syn还是rst*/
-
-
     tcp->psh = 0;
     tcp->ack = 0;
     tcp->urg = 0;
@@ -118,7 +113,6 @@ int tcp_pack(unsigned short randomport, char sendpacket[], int flag)
     /*校验算法*/
     tcp->check = 0;
     tcp->urg_ptr = 0;
-
     /*伪头部*/
     struct tcp_false_hdr f_tcp;
     f_tcp.src_ip = ip->saddr;
